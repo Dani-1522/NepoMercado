@@ -1,0 +1,382 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../config/constants.dart';
+import '../models/api_response.dart';
+import '../models/product.dart';
+import '../models/user.dart';
+import 'storage_service.dart';
+
+class ApiService {
+  static final ApiService _instance = ApiService._internal();
+  factory ApiService() => _instance;
+  ApiService._internal();
+
+   final String _baseUrl = Constants.apiBaseUrl;
+  final StorageService _storage = StorageService();
+
+  Future<Map<String, String>> _getHeaders() async {
+    final token = await _storage.getToken();
+    return {
+      'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
+  }
+
+  // AUTH ENDPOINTS
+  Future<ApiResponse<dynamic>> register(String name, String phone, String password) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/auth/register'),
+        headers: await _getHeaders(),
+        body: json.encode({
+          'name': name,
+          'phone': phone,
+          'password': password,
+        }),
+      );
+
+      final data = json.decode(response.body);
+      return ApiResponse.fromJson(data);
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        message: 'Error de conexión: $e',
+      );
+    }
+  }
+
+  Future<ApiResponse<dynamic>> login(String phone, String password) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/auth/login'),
+        headers: await _getHeaders(),
+        body: json.encode({
+          'phone': phone,
+          'password': password,
+        }),
+      );
+
+      final data = json.decode(response.body);
+      return ApiResponse.fromJson(data);
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        message: 'Error de conexión: $e',
+      );
+    }
+  }
+
+  // PRODUCT ENDPOINTS
+  Future<ApiResponse<List<Product>>> getProducts({int page = 1, int limit = 10}) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/products?page=$page&limit=$limit'),
+        headers: await _getHeaders(),
+      );
+
+      final data = json.decode(response.body);
+      final apiResponse = ApiResponse.fromJson(data);
+
+      if (apiResponse.success && apiResponse.data != null) {
+        final products = (apiResponse.data['products'] as List)
+            .map((item) => Product.fromJson(item))
+            .toList();
+        return ApiResponse(
+          success: true,
+          message: apiResponse.message,
+          data: products,
+        );
+      }
+
+      return ApiResponse(
+        success: false,
+        message: apiResponse.message,
+      );
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        message: 'Error de conexión: $e',
+      );
+    }
+  }
+
+  Future<ApiResponse<Product>> getProductById(String id) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/products/$id'),
+        headers: await _getHeaders(),
+      );
+
+      final data = json.decode(response.body);
+      final apiResponse = ApiResponse.fromJson(data);
+
+      if (apiResponse.success && apiResponse.data != null) {
+        final product = Product.fromJson(apiResponse.data['product']);
+        return ApiResponse(
+          success: true,
+          message: apiResponse.message,
+          data: product,
+        );
+      }
+
+      return ApiResponse(
+        success: false,
+        message: apiResponse.message,
+      );
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        message: 'Error de conexión: $e',
+      );
+    }
+  }
+
+  Future<ApiResponse<Product>> createProduct({
+  required String name,
+  required double price,
+  required String description,
+  required List<File> images,
+}) async {
+  try {
+    final token = await _storage.getToken();
+    
+    print('📦 Creando producto con ${images.length} Imagenes');
+
+    var request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$_baseUrl/products'),
+    );
+
+    request.headers['Authorization'] = 'Bearer $token';
+
+    // Campos de texto
+    request.fields['name'] = name;  
+    request.fields['price'] = price.toString();
+    request.fields['description'] = description;
+
+    for (var i = 0; i < images.length; i++) {
+      final image = images[i];
+      final mimeType = _getMimeType(image.path);
+
+      request.files.add(await http.MultipartFile.fromPath(
+        'images', // Nombre del campo como un array
+        image.path,
+        contentType: MediaType.parse(mimeType), // ✅ Especificar content-type
+      ));
+   
+      print('   - Imagen ${i + 1}: ${image.path} (MIME: $mimeType)');
+    }
+    print('📤 Enviando request...');
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+    
+    print('📥 Respuesta recibida:');
+    print('   - Status: ${response.statusCode}');
+    print('   - Body: ${response.body}');
+
+    // Verificar si es una respuesta JSON válida
+    if (response.body.startsWith('<!DOCTYPE html>')) {
+      throw Exception('El servidor respondió con HTML de error. Verifica los logs del backend.');
+    }
+
+    final data = json.decode(response.body);
+    final apiResponse = ApiResponse.fromJson(data);
+
+    if (apiResponse.success && apiResponse.data != null) {
+      final product = Product.fromJson(apiResponse.data['product']);
+      return ApiResponse(
+        success: true,
+        message: apiResponse.message,
+        data: product,
+      );
+    }
+
+    return ApiResponse(
+      success: false,
+      message: apiResponse.message,
+    );
+
+  } catch (e) {
+    print('💥 ERROR en createProduct: $e');
+    return ApiResponse(
+      success: false,
+      message: 'Error al crear producto: $e',
+    );
+  }
+}
+
+  Future<ApiResponse<List<Product>>> getMyProducts() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/products/user/my-products'),
+        headers: await _getHeaders(),
+      );
+
+      final data = json.decode(response.body);
+      final apiResponse = ApiResponse.fromJson(data);
+
+      if (apiResponse.success && apiResponse.data != null) {
+        final products = (apiResponse.data['products'] as List)
+            .map((item) => Product.fromJson(item))
+            .toList();
+        return ApiResponse(
+          success: true,
+          message: apiResponse.message,
+          data: products,
+        );
+      }
+
+      return ApiResponse(
+        success: false,
+        message: apiResponse.message,
+      );
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        message: 'Error de conexión: $e',
+      );
+    }
+  }
+ Future<ApiResponse<Map<String, dynamic>>> toggleLike(String productId) async {
+    try {
+      final token = await _storage.getToken();
+      
+      final response = await http.post(
+        Uri.parse('$_baseUrl/products/$productId/like'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final data = json.decode(response.body);
+      return ApiResponse.fromJson(data);
+
+    } catch (e) {
+      print('💥 ERROR en toggleLike: $e');
+      return ApiResponse(
+        success: false,
+        message: 'Error al dar like: $e',
+      );
+    }
+  }
+
+  // ✅ NUEVO: Obtener productos likeados
+  Future<ApiResponse<List<Product>>> getLikedProducts() async {
+    try {
+      final token = await _storage.getToken();
+      
+      final response = await http.get(
+        Uri.parse('$_baseUrl/products/user/liked'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final data = json.decode(response.body);
+      final apiResponse = ApiResponse.fromJson(data);
+
+      if (apiResponse.success && apiResponse.data != null) {
+        final products = (apiResponse.data['products'] as List)
+            .map((item) => Product.fromJson(item))
+            .toList();
+        return ApiResponse(
+          success: true,
+          message: apiResponse.message,
+          data: products,
+        );
+      }
+
+      return ApiResponse(
+        success: false,
+        message: apiResponse.message,
+      );
+
+    } catch (e) {
+      print('💥 ERROR en getLikedProducts: $e');
+      return ApiResponse(
+        success: false,
+        message: 'Error obteniendo productos likeados: $e',
+      );
+    }
+  }
+
+  // ✅ NUEVO: Recuperación de contraseña
+  Future<ApiResponse<dynamic>> forgotPassword(String phone) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/auth/forgot-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'phone': phone}),
+      );
+
+      final data = json.decode(response.body);
+      return ApiResponse.fromJson(data);
+
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        message: 'Error solicitando recuperación: $e',
+      );
+    }
+  }
+
+  // ✅ NUEVO: Verificar código
+  Future<ApiResponse<dynamic>> verifyRecoveryCode(String phone, String code) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/auth/verify-code'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'phone': phone, 'code': code}),
+      );
+
+      final data = json.decode(response.body);
+      return ApiResponse.fromJson(data);
+
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        message: 'Error verificando código: $e',
+      );
+    }
+  }
+
+  // ✅ NUEVO: Resetear contraseña
+  Future<ApiResponse<dynamic>> resetPassword(String tempToken, String newPassword) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/auth/reset-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'tempToken': tempToken,
+          'newPassword': newPassword,
+        }),
+      );
+
+      final data = json.decode(response.body);
+      return ApiResponse.fromJson(data);
+
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        message: 'Error reseteando contraseña: $e',
+      );
+    }
+  }
+
+  // Helper para detectar MIME type
+  String _getMimeType(String path) {
+    final extension = path.split('.').last.toLowerCase();
+    final mimeTypes = {
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'gif': 'image/gif',
+      'webp': 'image/webp'
+    };
+    return mimeTypes[extension] ?? 'image/jpeg';
+  }
+}
