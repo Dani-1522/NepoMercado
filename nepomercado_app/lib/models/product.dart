@@ -5,8 +5,7 @@ class Product {
   final String description;
   final List<String> imageUrls;
 
-  final Map<String, dynamic> userId;  // <--- CAMBIO IMPORTANTE
-
+  final String userId;
   final String? artisanName;
   final String? artisanPhone;
   final DateTime createdAt;
@@ -20,7 +19,7 @@ class Product {
     required this.price,
     required this.description,
     required this.imageUrls,
-    required this.userId,   // <--- ahora requerido
+    required this.userId,
     this.artisanName,
     this.artisanPhone,
     required this.createdAt,
@@ -29,28 +28,45 @@ class Product {
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
+    // Manejo de userId
+    String userId = '';
+    String? artisanName;
+    String? artisanPhone;
+
+    if (json['userId'] is String) {
+      userId = json['userId'] ?? '';
+    } else if (json['userId'] is Map<String, dynamic>) {
+      final userMap = json['userId'] as Map<String, dynamic>;
+      userId = userMap['_id']?.toString() ?? ''; // ← Asegurar que sea String
+      artisanName = userMap['name']?.toString();
+      artisanPhone = userMap['phone']?.toString();
+    }
+
+    // VALORES POR DEFECTO MÁS SEGUROS
     return Product(
-      id: json['_id'] ?? json['id'] ?? '',
-      name: json['name'] ?? '',
+      id: json['_id']?.toString() ?? json['id']?.toString() ?? '', // ← .toString() seguro
+      name: json['name']?.toString() ?? 'Sin nombre', // ← Valor por defecto
       price: (json['price'] ?? 0).toDouble(),
-      description: json['description'] ?? '',
+      description: json['description']?.toString() ?? 'Sin descripción', // ← Valor por defecto
       imageUrls: json['imageUrls'] != null
-          ? List<String>.from(json['imageUrls'])
-          : [],
+          ? List<String>.from(json['imageUrls'].map((url) => url?.toString() ?? '')) // ← .toString() seguro
+          : <String>[],
       
-      userId: json['userId'] ?? {},   // <--- now a Map
-      
-      artisanName: json['userId']?['name'],     // opcional
-      artisanPhone: json['userId']?['phone'],   // opcional
+      userId: userId,
+      artisanName: artisanName,
+      artisanPhone: artisanPhone,
 
       createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'])
+          ? DateTime.tryParse(json['createdAt']?.toString() ?? '') ?? DateTime.now() // ← DateTime.tryParse seguro
           : DateTime.now(),
 
-      likeCount: json['likeCount'] ?? 0,
+      likeCount: (json['likeCount'] ?? 0).toInt(),
       isLiked: json['isLiked'] ?? false,
     );
   }
+
+  // ... toJson() permanece igual
+
 
   Map<String, dynamic> toJson() {
     return {
@@ -59,7 +75,7 @@ class Product {
       "price": price,
       "description": description,
       "imageUrls": imageUrls,
-      "userId": userId,  
+      "userId": userId,  // <-- String
       "artisanName": artisanName,
       "artisanPhone": artisanPhone,
       "createdAt": createdAt.toIso8601String(),
@@ -67,4 +83,7 @@ class Product {
       "isLiked": isLiked,
     };
   }
+
+  // Método útil para saber si tenemos información completa del artesano
+  bool get hasArtisanDetails => artisanName != null && artisanPhone != null;
 }

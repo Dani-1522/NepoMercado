@@ -299,39 +299,52 @@ Future<ApiResponse<dynamic>> deleteProduct(String productId) async {
   }
 }
 
-  Future<ApiResponse<List<Product>>> getMyProducts() async {
-    try {
-      final response = await http.get(
-        Uri.parse('$_baseUrl/products/user/my-products'),
-        headers: await _getHeaders(),
-      );
+Future<ApiResponse<List<Product>>> getMyProducts() async {
+  try {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/products/user/my-products'),
+      headers: await _getHeaders(),
+    );
 
-      final data = json.decode(response.body);
-      final apiResponse = ApiResponse.fromJson(data);
+    final data = json.decode(response.body);
 
-      if (apiResponse.success && apiResponse.data != null) {
-        final products = (apiResponse.data['products'] as List)
-            .map((item) => Product.fromJson(item))
-            .toList();
-        return ApiResponse(
-          success: true,
-          message: apiResponse.message,
-          data: products,
-        );
+    if (data['success'] == true && data['data'] != null) {
+      final productsJson = data['data']['products'] as List? ?? [];
+      
+      final List<Product> products = [];
+      
+      for (final item in productsJson) {
+        try {
+          if (item is Map<String, dynamic>) {
+            final product = Product.fromJson(item);
+            products.add(product);
+          }
+        } catch (e) {
+          print('⚠️ Error procesando producto: $e');
+          // Continuar con los demás productos
+        }
       }
 
       return ApiResponse(
-        success: false,
-        message: apiResponse.message,
-      );
-    } catch (e) {
-      return ApiResponse(
-        success: false,
-        message: 'Error de conexión: $e',
+        success: true,
+        message: data['message']?.toString() ?? 'Productos obtenidos exitosamente', // ← SOLUCIÓN
+        data: products,
       );
     }
+
+    return ApiResponse(
+      success: false,
+      message: data['message']?.toString() ?? 'Error al obtener productos', // ← TAMBIÉN AQUÍ
+    );
+  } catch (e, stackTrace) {
+    print('💥 ERROR en getMyProducts: $e');
+    print('📋 StackTrace: $stackTrace');
+    return ApiResponse(
+      success: false,
+      message: 'Error de conexión: $e',
+    );
   }
-  
+}
   Future<ApiResponse<Map<String, dynamic>>> toggleLike(String productId) async {
     try {
       final token = await _storage.getToken();

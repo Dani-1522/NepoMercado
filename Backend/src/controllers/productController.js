@@ -387,6 +387,7 @@ async searchProducts(req, res) {
   async getUserProducts(req, res) {
     try {
       const products = await Product.find({ userId: req.user._id })
+        .populate('userId', 'name phone')
         .sort({ createdAt: -1 });
 
       res.json({
