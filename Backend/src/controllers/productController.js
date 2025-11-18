@@ -43,7 +43,8 @@ const productController = {
     });
 
     await product.save();
-    await product.populate('userId', 'name phone');
+          await product.populate('userId', 'name phone profileImage');
+
 
     res.status(201).json({
       success: true,
@@ -104,7 +105,7 @@ const productController = {
       }
 
       await product.save();
-      await product.populate('userId', 'name phone');
+      await product.populate('userId', 'name phone profileImage');
 
       res.json({
         success: true,
@@ -211,7 +212,7 @@ async searchProducts(req, res) {
 
     // Ejecutar consulta
     const products = await Product.find(filter)
-      .populate('userId', 'name phone')
+      .populate('userId', 'name phone profileImage')
       .sort(sortOptions)
       .skip(skip)
       .limit(parseInt(limit));
@@ -306,7 +307,7 @@ async searchProducts(req, res) {
     try {
       const products = await Product.find({ 
         likes: req.user._id })
-        .populate('userId', 'name phone')
+        .populate('userId', 'name phone profileImage')
         .sort({ createdAt: -1 });
 
       res.json({
@@ -329,7 +330,7 @@ async searchProducts(req, res) {
       const skip = (page - 1) * limit;
 
       const products = await Product.find()
-        .populate('userId', 'name phone')
+        .populate('userId', 'name phone profileImage')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit);
@@ -361,7 +362,7 @@ async searchProducts(req, res) {
   async getProductById(req, res) {
     try {
       const product = await Product.findById(req.params.id)
-        .populate('userId', 'name phone');
+        .populate('userId', 'name phone profileImage');
 
       if (!product) {
         return res.status(404).json({
@@ -387,7 +388,7 @@ async searchProducts(req, res) {
   async getUserProducts(req, res) {
     try {
       const products = await Product.find({ userId: req.user._id })
-        .populate('userId', 'name phone')
+        .populate('userId', 'name phone profileImage')
         .sort({ createdAt: -1 });
 
       res.json({

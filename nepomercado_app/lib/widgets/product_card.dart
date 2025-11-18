@@ -28,6 +28,23 @@ class ProductCard extends StatefulWidget {
 class _ProductCardState extends State<ProductCard> {
   bool _isLiking = false;
 
+  String _formatPrice(double price) {
+    final intPrice = price.toInt();
+
+    String priceStr = intPrice.toString();
+    String formatted = '';
+    int counter = 0;
+
+    for (int i = priceStr.length - 1; i >= 0; i--) {
+      counter++;
+      formatted = priceStr[i] + formatted;
+      if (counter % 3 == 0 && i != 0) {
+        formatted = '.$formatted';
+      }
+    }
+    return '\$$formatted';
+  }
+
   Future<void> _toggleLike() async {
     final authService = Provider.of<AuthService>(context, listen: false);
     
@@ -218,7 +235,7 @@ class _ProductCardState extends State<ProductCard> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        '\$${widget.product.price.toStringAsFixed(2)}',
+                         _formatPrice(widget.product.price),
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,

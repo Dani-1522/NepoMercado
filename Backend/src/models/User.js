@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
+
 const userSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -19,11 +20,15 @@ const userSchema = new mongoose.Schema({
     required: [true, 'La contraseña es obligatoria'],
     minlength: [6, 'La contraseña debe tener al menos 6 caracteres']
   },
+  profileImage: {
+    type: String,
+    default: null
+  },
   recoveryCode:{
     type: String,
     default: null
   },
-  recoveryCodeExpiration:{
+  recoveryCodeExpires:{
     type: Date,
     default: null
   }
@@ -48,5 +53,13 @@ userSchema.pre('save', async function(next) {
     next(error);
   }
 });
+
+userSchema.methods.toJSON = function() {
+  const user = this.toObject();
+  delete user.passwordHash;
+  delete user.recoveryCode;
+  delete user.recoveryCodeExpires;
+  return user;
+};
 
 module.exports = mongoose.model('User', userSchema);

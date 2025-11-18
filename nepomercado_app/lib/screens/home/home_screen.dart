@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nepomercado_app/screens/products/search_screen.dart';
+import 'package:nepomercado_app/screens/profile/profile_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../services/auth_service.dart';
@@ -320,10 +321,22 @@ Future<void> _toggleLike(Product product, int index) async {
                 );
               },
             ),
+
+              ListTile(
+              leading: const Icon(Icons.person),
+              title: const Text('Mi perfil '),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                   MaterialPageRoute(builder: (context) => ProfileScreen()),
+                );
+              },
+            ),
             
             const Divider(),
           ],
-
+          
           // Sección de cuenta
           if (isLoggedIn)
             // Cerrar sesión

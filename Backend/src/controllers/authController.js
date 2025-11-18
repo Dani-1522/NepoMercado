@@ -35,7 +35,8 @@ const authController = {
           user: {
             id: user._id,
             name: user.name,
-            phone: user.phone
+            phone: user.phone,
+            profileImage: user.profileImage
           },
           token
         }
@@ -82,7 +83,8 @@ const authController = {
           user: {
             id: user._id,
             name: user.name,
-            phone: user.phone
+            phone: user.phone,
+            profileImage: user.profileImage
           },
           token
         }

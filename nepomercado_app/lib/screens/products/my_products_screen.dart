@@ -83,6 +83,7 @@ class _MyProductsScreenState extends State<MyProductsScreen> {
           userId: product.userId,
           artisanName: product.artisanName,
           artisanPhone: product.artisanPhone,
+          artisanProfileImage: product.artisanProfileImage,
           createdAt: product.createdAt,
           likeCount: product.likeCount,
           isLiked: product.isLiked,
@@ -93,34 +94,51 @@ class _MyProductsScreenState extends State<MyProductsScreen> {
     }
   }
 
-  void _showEditOptions(Product product) {
+  // 🔥 NUEVO: Mostrar menu de 3 puntos
+  void _showPopupMenu(Product product, int index) {
     showModalBottomSheet(
-      context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.edit),
-              title: const Text('Editar Producto'),
-              onTap: () {
-                Navigator.pop(context);
-                _navigateToEditProduct(product);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.delete, color: Colors.red),
-              title: const Text('Eliminar Producto', style: TextStyle(color: Colors.red)),
-              onTap: () {
-                Navigator.pop(context);
-                _confirmDeleteProduct(product);
-              },
-            ),
-          ],
+       context: context,
+      isScrollControlled: true,
+      builder: (context) => SafeArea(
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.edit),
+                title: const Text('Editar Producto'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _navigateToEditProduct(product);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.delete),
+                title: const Text('Eliminar Producto'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _confirmDeleteProduct(product);
+                },
+              ),
+               const SizedBox(height: 16),
+        SizedBox(
+          width: double.infinity,
+          height: 50,
+          child: OutlinedButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+        ),
+            ],
+          ),
         ),
       ),
     );
+  }
+  // 🔥 ACTUALIZADO: Mantener el método existente pero renombrar para claridad
+  void _showEditOptions(Product product) {
+    _showPopupMenu(product, _products.indexOf(product));
   }
 
   void _navigateToEditProduct(Product product) {
@@ -141,7 +159,7 @@ class _MyProductsScreenState extends State<MyProductsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Eliminar Producto'),
-        content: const Text('¿Estás seguro de que quieres eliminar este producto?'),
+        content: const Text('¿Estás seguro de que quieres eliminar este producto? Esta acción no se puede deshacer.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -182,7 +200,9 @@ class _MyProductsScreenState extends State<MyProductsScreen> {
           ),
         ],
       ),
-      body: _isLoading
+      body: SafeArea( // 🔥 RESPETA LAS BARRAS DEL SISTEMA
+      bottom: true, // 🔥 ESPECIALMENTE IMPORTANTE PARA ANDROID
+      child: _isLoading
           ? const LoadingIndicator(message: 'Cargando tus productos...')
           : _products.isEmpty
               ? const Center(
@@ -195,30 +215,68 @@ class _MyProductsScreenState extends State<MyProductsScreen> {
                         'No tienes productos publicados',
                         style: TextStyle(fontSize: 16, color: Colors.grey),
                       ),
-                      SizedBox(height: 8),
-                      Text(
-                        'Presiona el botón + para agregar tu primer producto',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.grey),
-                      ),
                     ],
                   ),
                 )
               : RefreshIndicator(
                   onRefresh: _loadMyProducts,
                   child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
                     itemCount: _products.length,
                     itemBuilder: (context, index) {
                       final product = _products[index];
-                      return ProductCard(
-                        product: product,
-                        onTap: () => _navigateToProductDetail(product),
-                        onLike: () => _toggleLike(product, index),
-                        onLongPress: () => _showEditOptions(product),
-                      );
+                      return _buildProductCardWithMenu(product, index);
                     },
                   ),
                 ),
-    );
-  }
+    ),
+  );
+}
+
+  // 🔥 NUEVO: Widget de tarjeta con menu de 3 puntos
+// 🔥 ALTERNATIVA: Si el Stack no funciona, modifica el ProductCard directamente
+Widget _buildProductCardWithMenu(Product product, int index) {
+  return Container(
+    margin: const EdgeInsets.only(bottom: 16),
+    child: Stack(
+      children: [
+        ProductCard(
+          product: product,
+          onTap: () => _navigateToProductDetail(product),
+          onLike: () => _toggleLike(product, index),
+          onLongPress: () => _showEditOptions(product),
+        ),
+        
+        // Botón de 3 puntos
+        Positioned(
+          top: 12,
+          right: 12,
+          child: GestureDetector(
+            onTap: () => _showPopupMenu(product, index),
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.more_vert,
+                size: 20,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
 }

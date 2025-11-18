@@ -107,8 +107,6 @@ class _EditProductScreenState extends State<EditProductScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // TODO: Implementar actualización con múltiples imágenes
-      // Por ahora, usamos el método existente
       final response = await _apiService.updateProduct(
         productId: widget.product.id,
         name: _nameController.text.trim(),
@@ -121,7 +119,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
 
       if (response.success) {
         _showSuccessSnackbar('Producto actualizado exitosamente');
-        Navigator.pop(context, true); // Regresar con éxito
+        Navigator.pop(context, true);
       } else {
         _showErrorSnackbar(response.message);
       }
@@ -161,7 +159,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
 
       if (response.success) {
         _showSuccessSnackbar('Producto eliminado exitosamente');
-        Navigator.pop(context, true); // Regresar indicando eliminación
+        Navigator.pop(context, true);
       } else {
         _showErrorSnackbar(response.message);
       }
@@ -205,44 +203,47 @@ class _EditProductScreenState extends State<EditProductScreen> {
             ),
         ],
       ),
-      body: (_isLoading || _isDeleting)
-    ? LoadingIndicator(
-        message: _isDeleting ? 'Eliminando producto...' : 'Actualizando producto...')
-          : Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Form(
-                key: _formKey,
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      // Imágenes existentes
-                      if (_existingImageUrls.isNotEmpty) ...[
+      body: SafeArea(
+        bottom: true,
+        child: (_isLoading || _isDeleting)
+            ? LoadingIndicator(
+                message: _isDeleting ? 'Eliminando producto...' : 'Actualizando producto...')
+            : Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Form(
+                  key: _formKey,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        // Imágenes existentes
+                        if (_existingImageUrls.isNotEmpty) ...[
+                          _buildImageSection(
+                            'Imágenes Actuales',
+                            _existingImageUrls,
+                            _removeExistingImage,
+                            isNetworkImage: true,
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+
+                        // Nuevas imágenes
                         _buildImageSection(
-                          'Imágenes Actuales',
-                          _existingImageUrls,
-                          _removeExistingImage,
-                          isNetworkImage: true,
+                          'Nuevas Imágenes (${_selectedImages.length}/5)',
+                          _selectedImages.map((f) => f.path).toList(),
+                          _removeNewImage,
+                          isNetworkImage: false,
                         ),
-                        const SizedBox(height: 16),
+
+                        const SizedBox(height: 24),
+                        _buildFormFields(),
+                        const SizedBox(height: 24),
+                        _buildActionButtons(),
                       ],
-
-                      // Nuevas imágenes
-                      _buildImageSection(
-                        'Nuevas Imágenes (${_selectedImages.length}/5)',
-                        _selectedImages.map((f) => f.path).toList(),
-                        _removeNewImage,
-                        isNetworkImage: false,
-                      ),
-
-                      const SizedBox(height: 24),
-                      _buildFormFields(),
-                      const SizedBox(height: 24),
-                      _buildActionButtons(),
-                    ],
+                    ),
                   ),
                 ),
               ),
-            ),
+      ),
     );
   }
 
@@ -420,7 +421,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
             child: const Text('Actualizar Producto', style: TextStyle(fontSize: 16)),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         SizedBox(
           width: double.infinity,
           height: 50,

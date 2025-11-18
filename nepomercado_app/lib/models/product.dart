@@ -8,6 +8,7 @@ class Product {
   final String userId;
   final String? artisanName;
   final String? artisanPhone;
+   final String? artisanProfileImage;
   final DateTime createdAt;
 
   int likeCount;
@@ -22,6 +23,7 @@ class Product {
     required this.userId,
     this.artisanName,
     this.artisanPhone,
+    this.artisanProfileImage,
     required this.createdAt,
     this.likeCount = 0,
     this.isLiked = false,
@@ -32,6 +34,7 @@ class Product {
     String userId = '';
     String? artisanName;
     String? artisanPhone;
+    String? artisanProfileImage;
 
     if (json['userId'] is String) {
       userId = json['userId'] ?? '';
@@ -40,6 +43,7 @@ class Product {
       userId = userMap['_id']?.toString() ?? ''; // ← Asegurar que sea String
       artisanName = userMap['name']?.toString();
       artisanPhone = userMap['phone']?.toString();
+      artisanProfileImage = userMap['profileImage']; 
     }
 
     // VALORES POR DEFECTO MÁS SEGUROS
@@ -55,6 +59,7 @@ class Product {
       userId: userId,
       artisanName: artisanName,
       artisanPhone: artisanPhone,
+      artisanProfileImage: artisanProfileImage,
 
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt']?.toString() ?? '') ?? DateTime.now() // ← DateTime.tryParse seguro
@@ -78,6 +83,7 @@ class Product {
       "userId": userId,  // <-- String
       "artisanName": artisanName,
       "artisanPhone": artisanPhone,
+      "artisanProfileImage": artisanProfileImage,
       "createdAt": createdAt.toIso8601String(),
       "likeCount": likeCount,
       "isLiked": isLiked,
@@ -86,4 +92,5 @@ class Product {
 
   // Método útil para saber si tenemos información completa del artesano
   bool get hasArtisanDetails => artisanName != null && artisanPhone != null;
+   bool get hasArtisanProfileImage => artisanProfileImage != null && artisanProfileImage!.isNotEmpty;
 }

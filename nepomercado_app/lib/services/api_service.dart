@@ -15,7 +15,7 @@ class ApiService {
   factory ApiService() => _instance;
   ApiService._internal();
 
-   final String _baseUrl = Constants.apiBaseUrl;
+  final String _baseUrl = Constants.apiBaseUrl;
   final StorageService _storage = StorageService();
 
   Future<Map<String, String>> _getHeaders() async {

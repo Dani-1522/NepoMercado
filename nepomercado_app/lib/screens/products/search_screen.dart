@@ -130,6 +130,7 @@ class _SearchScreenState extends State<SearchScreen> {
           userId: product.userId,
           artisanName: product.artisanName,
           artisanPhone: product.artisanPhone,
+          artisanProfileImage: product.artisanProfileImage,
           createdAt: product.createdAt,
           likeCount: product.likeCount,
           isLiked: product.isLiked,
@@ -169,107 +170,110 @@ class _SearchScreenState extends State<SearchScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Barra de búsqueda
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextField(
-              controller: _searchController,
-              onChanged: _onSearchChanged,
-              decoration: InputDecoration(
-                hintText: 'Buscar productos...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                filled: true,
-                fillColor: Colors.grey[50],
-              ),
-            ),
-          ),
-
-          // Indicador de filtros activos
-          if (_filters.hasActiveFilters)
+      body: SafeArea(
+        bottom: true,
+        child: Column(
+          children: [
+            // Barra de búsqueda
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Row(
-                children: [
-                  Chip(
-                    label: const Text('Filtros activos'),
-                    backgroundColor: Colors.blue[50],
+              padding: const EdgeInsets.all(16.0),
+              child: TextField(
+                controller: _searchController,
+                onChanged: _onSearchChanged,
+                decoration: InputDecoration(
+                  hintText: 'Buscar productos...',
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          if (_filters.query.isNotEmpty)
-                            _buildFilterChip('Buscar: "${_filters.query}"'),
-                          if (_filters.minPrice != null)
-                            _buildFilterChip('Mín: \$${_filters.minPrice!.toStringAsFixed(0)}'),
-                          if (_filters.maxPrice != null)
-                            _buildFilterChip('Máx: \$${_filters.maxPrice!.toStringAsFixed(0)}'),
-                        ],
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.clear, size: 18),
-                    onPressed: _clearFilters,
-                  ),
-                ],
+                  filled: true,
+                  fillColor: Colors.grey[50],
+                ),
               ),
             ),
 
-          // Resultados
-          Expanded(
-            child: _isLoading && _products.isEmpty
-                ? const LoadingIndicator(message: 'Buscando productos...')
-                : _products.isEmpty
-                    ? const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+            // Indicador de filtros activos
+            if (_filters.hasActiveFilters)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  children: [
+                    Chip(
+                      label: const Text('Filtros activos'),
+                      backgroundColor: Colors.blue[50],
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
                           children: [
-                            Icon(Icons.search_off, size: 64, color: Colors.grey),
-                            SizedBox(height: 16),
-                            Text(
-                              'No se encontraron productos',
-                              style: TextStyle(fontSize: 16, color: Colors.grey),
-                            ),
-                            SizedBox(height: 8),
-                            Text(
-                              'Intenta con otros términos de búsqueda',
-                              style: TextStyle(color: Colors.grey),
-                            ),
+                            if (_filters.query.isNotEmpty)
+                              _buildFilterChip('Buscar: "${_filters.query}"'),
+                            if (_filters.minPrice != null)
+                              _buildFilterChip('Mín: \$${_filters.minPrice!.toStringAsFixed(0)}'),
+                            if (_filters.maxPrice != null)
+                              _buildFilterChip('Máx: \$${_filters.maxPrice!.toStringAsFixed(0)}'),
                           ],
                         ),
-                      )
-                    : NotificationListener<ScrollNotification>(
-                        onNotification: (scrollInfo) {
-                          if (scrollInfo.metrics.pixels ==
-                              scrollInfo.metrics.maxScrollExtent) {
-                            _loadMoreProducts();
-                          }
-                          return false;
-                        },
-                        child: ListView.builder(
-                          itemCount: _products.length + (_hasMore ? 1 : 0),
-                          itemBuilder: (context, index) {
-                            if (index == _products.length) {
-                              return _buildLoadMoreIndicator();
-                            }
-                            return ProductCard(
-                              product: _products[index],
-                              onTap: () => _navigateToProductDetail(_products[index]),
-                              onLike: () => _toggleLike(_products[index], index),
-                            );
-                          },
-                        ),
                       ),
-          ),
-        ],
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.clear, size: 18),
+                      onPressed: _clearFilters,
+                    ),
+                  ],
+                ),
+              ),
+
+            // Resultados
+            Expanded(
+              child: _isLoading && _products.isEmpty
+                  ? const LoadingIndicator(message: 'Buscando productos...')
+                  : _products.isEmpty
+                      ? const Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.search_off, size: 64, color: Colors.grey),
+                              SizedBox(height: 16),
+                              Text(
+                                'No se encontraron productos',
+                                style: TextStyle(fontSize: 16, color: Colors.grey),
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                'Intenta con otros términos de búsqueda',
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                        )
+                      : NotificationListener<ScrollNotification>(
+                          onNotification: (scrollInfo) {
+                            if (scrollInfo.metrics.pixels ==
+                                scrollInfo.metrics.maxScrollExtent) {
+                              _loadMoreProducts();
+                            }
+                            return false;
+                          },
+                          child: ListView.builder(
+                            itemCount: _products.length + (_hasMore ? 1 : 0),
+                            itemBuilder: (context, index) {
+                              if (index == _products.length) {
+                                return _buildLoadMoreIndicator();
+                              }
+                              return ProductCard(
+                                product: _products[index],
+                                onTap: () => _navigateToProductDetail(_products[index]),
+                                onLike: () => _toggleLike(_products[index], index),
+                              );
+                            },
+                          ),
+                        ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -299,14 +303,15 @@ class _SearchScreenState extends State<SearchScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => _buildFilterSheet(),
+      builder: (context) => SafeArea(
+        child: _buildFilterSheet(),
+      ),
     );
   }
 
   Widget _buildFilterSheet() {
     return Container(
-      padding: const EdgeInsets.all(16.0),
-      height: MediaQuery.of(context).size.height * 0.7,
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
