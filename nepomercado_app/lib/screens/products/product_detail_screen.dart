@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
 import '../../models/product.dart';
+import 'image_viewer_screen.dart'; 
 
 class ProductDetailScreen extends StatefulWidget {
   final Product product;
@@ -48,9 +49,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           artisanName: _product.artisanName,
           artisanPhone: _product.artisanPhone,
           createdAt: _product.createdAt,
-          likes: _product.likes,
-          likeCount: response.data?['likeCount'] ?? _product.likeCount,
-          isLiked: response.data?['liked'] ?? _product.isLiked,
+          likeCount: _product.likeCount,
+          isLiked: _product.isLiked,
+          
         );
       });
     }
@@ -141,7 +142,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         const Icon(Icons.favorite, color: Colors.red, size: 16),
                         const SizedBox(width: 4),
                         Text(
-                          '${_product.likeCount} ${_product.likeCount == 1 ? 'persona le da' : 'personas le dan'} me encanta',
+                          '${_product.likeCount} ${_product.likeCount == 1 ? ' persona le han da' : ' personas le han dado'} me encanta',
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ],
@@ -161,12 +162,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Información del artesano
+                  
                   if (_product.artisanName != null) ...[
                     const Divider(),
                     const SizedBox(height: 8),
                     Text(
-                      'Artesano:',
+                      'Vendedor:',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -211,51 +212,91 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   // ✅ NUEVO: Carrusel para múltiples imágenes
-  Widget _buildImageCarousel() {
-    if (_product.imageUrls.isEmpty) {
-      return Container(
-        height: 300,
-        color: Colors.grey[200],
-        child: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.image, size: 50, color: Colors.grey),
-              SizedBox(height: 8),
-              Text('No hay imágenes disponibles'),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return SizedBox(
+Widget _buildImageCarousel() {
+  if (_product.imageUrls.isEmpty) {
+    return Container(
       height: 300,
-      child: PageView.builder(
-        itemCount: _product.imageUrls.length,
-        itemBuilder: (context, index) {
-          return CachedNetworkImage(
-            imageUrl: _product.imageUrls[index],
-            width: double.infinity,
-            fit: BoxFit.cover,
-            placeholder: (context, url) => Container(
-              color: Colors.grey[300],
-              child: const Center(child: CircularProgressIndicator()),
-            ),
-            errorWidget: (context, url, error) => Container(
-              color: Colors.grey[300],
-              child: const Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error, size: 50, color: Colors.grey),
-                  SizedBox(height: 8),
-                  Text('Error al cargar imagen'),
-                ],
-              ),
-            ),
-          );
-        },
+      color: Colors.grey[200],
+      child: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.image, size: 50, color: Colors.grey),
+            SizedBox(height: 8),
+            Text('No hay imágenes disponibles'),
+          ],
+        ),
       ),
     );
   }
+
+  return GestureDetector(
+    onTap: () {
+      // Navegar al visor de imágenes
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ImageViewerScreen(
+            imageUrls: _product.imageUrls,
+            initialIndex: 0,
+          ),
+        ),
+      );
+    },
+    child: SizedBox(
+      height: 300,
+      child: Stack(
+        children: [
+          PageView.builder(
+            itemCount: _product.imageUrls.length,
+            itemBuilder: (context, index) {
+              return CachedNetworkImage(
+                imageUrl: _product.imageUrls[index],
+                width: double.infinity,
+                fit: BoxFit.cover,
+                placeholder: (context, url) => Container(
+                  color: Colors.grey[300],
+                  child: const Center(child: CircularProgressIndicator()),
+                ),
+                errorWidget: (context, url, error) => Container(
+                  color: Colors.grey[300],
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.error, size: 50, color: Colors.grey),
+                      SizedBox(height: 8),
+                      Text('Error al cargar imagen'),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+          
+          // Indicador de múltiples imágenes
+          if (_product.imageUrls.length > 1)
+            Positioned(
+              top: 16,
+              right: 16,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  '${_product.imageUrls.length} imágenes',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    ),
+  );
+}
 }

@@ -30,10 +30,30 @@ router.post(
   productController.createProduct
 );
 
+router.put(
+  '/:id',
+  authMiddleware,
+  uploadMiddleware,
+  handleUploadErrors,
+  productController.updateProduct
+);
+
+router.delete(
+  '/:id',
+  authMiddleware,
+  productController.deleteProduct
+);
+
 router.post(
   '/:id/like', 
   authMiddleware, 
   productController.toggleLike
+);
+
+
+router.get(
+  '/search/all', 
+  productController.searchProducts
 );
 
 router.get(

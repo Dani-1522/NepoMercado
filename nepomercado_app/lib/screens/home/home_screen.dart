@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nepomercado_app/screens/products/search_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../services/auth_service.dart';
@@ -46,10 +47,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (response.success && response.data != null) {
       setState(() {
+      final NewProducts = response.data!;
+        
         if (loadMore) {
-          _products.addAll(response.data!);
+          _products.addAll(NewProducts);
         } else {
-          _products = response.data!;
+          _products = NewProducts;
         }
         _hasMore = response.data!.length == _limit;
         _isLoading = false;
@@ -97,6 +100,45 @@ class _HomeScreenState extends State<HomeScreen> {
       _showErrorSnackbar('No se pudo abrir WhatsApp');
     }
   }
+  // En la clase _HomeScreenState, actualiza el método _toggleLike:
+Future<void> _toggleLike(Product product, int index) async {
+  final response = await _apiService.toggleLike(product.id);
+  
+  if (response.success) {
+    setState(() {
+      // Actualizar el producto en la lista con el nuevo estado
+      _products[index] = Product(
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        description: product.description,
+        imageUrls: product.imageUrls,
+        userId: product.userId,
+        artisanName: product.artisanName,
+        artisanPhone: product.artisanPhone,
+        createdAt: product.createdAt,
+        likeCount: product.likeCount,
+        isLiked: product.isLiked, 
+      );
+    });
+    
+    // Mostrar feedback visual
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          response.data?['liked'] == true 
+            ? '❤️ Agregado a tus favoritos' 
+            : '💔 Removido de tus favoritos',
+        ),
+        duration: const Duration(seconds: 1),
+        backgroundColor: response.data?['liked'] == true ? Colors.green : Colors.grey,
+      ),
+    );
+  } else {
+    _showErrorSnackbar(response.message);
+  }
+}
+  
 
   @override
   Widget build(BuildContext context) {
@@ -105,24 +147,34 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Catálogo de Artesanos'),
-        actions: [
-          if (isLoggedIn)
-            IconButton(
-              icon: const Icon(Icons.add),
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const AddProductScreen(),
-                ),
-              ),
-            ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _refreshProducts,
-          ),
-        ],
+  title: const Text('Catálogo'),
+  actions: [
+    IconButton(
+      icon: const Icon(Icons.search),
+      onPressed: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const SearchScreen(),
+        ),
       ),
+    ),
+    if (isLoggedIn)
+      IconButton(
+        icon: const Icon(Icons.add),
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const AddProductScreen(),
+          ),
+        ),
+      ),
+    IconButton(
+      icon: const Icon(Icons.refresh),
+      onPressed: _refreshProducts,
+    ),
+  ],
+),
+
       drawer: _buildDrawer(authService, isLoggedIn),
       body: _isLoading && _products.isEmpty
           ? const LoadingIndicator(message: 'Cargando productos...')
@@ -195,7 +247,7 @@ class _HomeScreenState extends State<HomeScreen> {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 const Text(
-                  'Artesanos App',
+                  'Nepo Mercado App',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 24,
@@ -238,20 +290,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   },
-),
-
-// Y en las acciones de la app bar, agrega:
-if (isLoggedIn)
-  IconButton(
-    icon: const Icon(Icons.favorite),
-    onPressed: () => Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const LikedProductsScreen(),
-      ),
-    ),
-  ),
-            
+),            
             // Mis productos
             ListTile(
               leading: const Icon(Icons.inventory),

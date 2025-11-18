@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:nepomercado_app/models/product.dart';
 import 'package:nepomercado_app/screens/auth/reset_password_screen.dart';
 import 'package:nepomercado_app/screens/auth/verify_code_screen.dart';
+import 'package:nepomercado_app/screens/products/edit_product_screen.dart';
+import 'package:nepomercado_app/screens/products/search_screen.dart';
 import 'package:provider/provider.dart';
 import 'services/auth_service.dart';
 import 'screens/auth/login_screen.dart';
@@ -44,6 +47,12 @@ class MyApp extends StatelessWidget {
           // ✅ NUEVAS RUTAS
           '/liked-products': (context) => const LikedProductsScreen(),
           '/forgot-password': (context) => const ForgotPasswordScreen(),
+          '/search': (context) => const SearchScreen(),
+          'edit-product': (context) {
+            final product = ModalRoute.of(context)!.settings.arguments as Product;
+            return EditProductScreen(product: product);
+          },
+
         },
         // ✅ MEJORA: Manejar rutas con parámetros
         onGenerateRoute: (settings) {

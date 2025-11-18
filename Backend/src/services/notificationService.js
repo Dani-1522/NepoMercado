@@ -1,25 +1,28 @@
 const axios = require('axios');
 
-// Servicio para enviar notificaciones por WhatsApp Cloud API
 class WhatsAppService {
   constructor() {
     this.baseURL = 'https://graph.facebook.com/v18.0';
     this.accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
     this.phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+    
+    // Validar que tenemos la configuración necesaria
+    if (!this.accessToken || !this.phoneNumberId) {
+      console.warn('⚠️  WhatsApp Cloud API no configurado completamente');
+      console.warn('   Configura WHATSAPP_ACCESS_TOKEN y WHATSAPP_PHONE_NUMBER_ID en .env');
+    }
   }
 
   async sendMessage(phone, message) {
     try {
       // Validar configuración
       if (!this.accessToken || !this.phoneNumberId) {
-        console.log('💬 WHATSAPP CLOUD API - Configuración faltante:');
-        console.log('   ⚠️  Configura WHATSAPP_ACCESS_TOKEN y WHATSAPP_PHONE_NUMBER_ID en .env');
-        console.log(`   Mensaje simulado para ${phone}: ${message}`);
-        return true;
+        throw new Error('WhatsApp Cloud API no configurado. Revisa las variables de entorno.');
       }
 
-      // Formatear número (eliminar caracteres no numéricos y agregar código país)
+      // Formatear número de teléfono
       const formattedPhone = this.formatPhoneNumber(phone);
+      console.log(`📤 Enviando WhatsApp a: ${formattedPhone}`);
       
       const url = `${this.baseURL}/${this.phoneNumberId}/messages`;
       
@@ -32,43 +35,67 @@ class WhatsAppService {
         }
       };
 
+      console.log('🔧 Payload WhatsApp:', JSON.stringify(payload, null, 2));
+
       const response = await axios.post(url, payload, {
         headers: {
           'Authorization': `Bearer ${this.accessToken}`,
           'Content-Type': 'application/json'
-        }
+        },
+        timeout: 10000 // 10 segundos timeout
       });
 
-      console.log(`💬 WhatsApp enviado a ${formattedPhone}`);
-      console.log(`   Message ID: ${response.data.messages[0].id}`);
+      console.log(`✅ WhatsApp enviado exitosamente a ${formattedPhone}`);
+      console.log(`   Message ID: ${response.data?.messages?.[0]?.id}`);
       return true;
 
     } catch (error) {
-      console.error('❌ Error enviando WhatsApp:', error.response?.data || error.message);
+      console.error('❌ ERROR enviando WhatsApp:');
       
-      // En desarrollo, simular éxito
-      if (process.env.NODE_ENV === 'development') {
-        console.log('💬 WHATSAPP SIMULADO (modo desarrollo):');
-        console.log(`   Para: ${phone}`);
-        console.log(`   Mensaje: ${message}`);
-        return true;
+      if (error.response) {
+        // Error de la API de Facebook
+        console.error('   Status:', error.response.status);
+        console.error('   Data:', JSON.stringify(error.response.data, null, 2));
+        
+        const errorMessage = error.response.data?.error?.message || 'Error desconocido';
+        throw new Error(`WhatsApp API Error: ${errorMessage}`);
+      } else if (error.request) {
+        // Error de red
+        console.error('   No se recibió respuesta del servidor');
+        throw new Error('Error de conexión con WhatsApp API');
+      } else {
+        // Error de configuración
+        console.error('   Error:', error.message);
+        throw error;
       }
-      
-      throw new Error(`Error enviando WhatsApp: ${error.response?.data?.error?.message || error.message}`);
     }
   }
 
   // Formatear número de teléfono
   formatPhoneNumber(phone) {
-    // Eliminar todo excepto números y +
-    let cleaned = phone.replace(/[^\d+]/g, '');
-    
-    // Si no tiene código país, agregar +52 (México) por defecto
-    if (!cleaned.startsWith('+')) {
-      cleaned = '+52' + cleaned;
+    try {
+      // Eliminar todo excepto números y +
+      let cleaned = phone.replace(/[^\d+]/g, '');
+      
+      // Si no tiene código país, agregar +57 (colombia) por defecto
+      if (!cleaned.startsWith('+')) {
+        // Asumir que es un número mexicano
+        if (cleaned.length === 10) {
+          cleaned = '+57' + cleaned;
+        } else {
+          throw new Error('Formato de teléfono inválido. Use formato: +573014234567');
+        }
+      }
+      
+      // Validar longitud mínima
+      if (cleaned.length < 10) {
+        throw new Error('Número de teléfono demasiado corto');
+      }
+      
+      return cleaned;
+    } catch (error) {
+      throw new Error(`Error formateando teléfono: ${error.message}`);
     }
-    
-    return cleaned;
   }
 
   // Método para enviar mensaje de plantilla (para códigos de verificación)
@@ -87,10 +114,15 @@ class WhatsAppService {
           language: {
             code: 'es'
           },
-          components: parameters.length > 0 ? [{
-            type: 'body',
-            parameters: parameters
-          }] : undefined
+          components: parameters.length > 0 ? [
+            {
+              type: 'body',
+              parameters: parameters.map(param => ({
+                type: 'text',
+                text: param
+              }))
+            }
+          ] : undefined
         }
       };
 
@@ -101,7 +133,7 @@ class WhatsAppService {
         }
       });
 
-      console.log(`💬 Plantilla WhatsApp enviada a ${formattedPhone}`);
+      console.log(`✅ Plantilla WhatsApp enviada a ${formattedPhone}`);
       return true;
 
     } catch (error) {

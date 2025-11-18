@@ -273,11 +273,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                 : Theme.of(context).primaryColor,
                           ),
                           child: Text(
-                            authService.currentUser == null 
-                                ? 'Regístrate para Publicar' 
-                                : 'Publicar Producto',
-                            style: const TextStyle(fontSize: 16),
-                          ),
+                              authService.currentUser == null
+                                  ? 'Regístrate para Publicar'
+                                  : 'Publicar Producto',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: authService.currentUser == null
+                                    ? Colors.black   // texto negro cuando está gris
+                                    : Colors.white,  // texto blanco cuando está primario
+                              ),
+                            ),
                         ),
                       ),
                     ],

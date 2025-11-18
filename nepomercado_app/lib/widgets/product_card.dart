@@ -9,6 +9,7 @@ class ProductCard extends StatefulWidget {
   final Product product;
   final VoidCallback? onTap;
   final VoidCallback? onLike;
+  final VoidCallback? onLongPress;
   final bool showLikeButton;
 
   const ProductCard({
@@ -16,6 +17,7 @@ class ProductCard extends StatefulWidget {
     required this.product,
     this.onTap,
     this.onLike,
+    this.onLongPress,
     this.showLikeButton = true,
   }) : super(key: key);
 
@@ -53,8 +55,8 @@ class _ProductCardState extends State<ProductCard> {
       // Por ahora solo actualizamos localmente
       if (mounted) {
         setState(() {
-          // widget.product.likeCount = newLikeCount;
-          // widget.product.isLiked = isLiked;
+          widget.product.likeCount = newLikeCount;
+          widget.product.isLiked = isLiked;
         });
       }
     }
@@ -93,6 +95,7 @@ class _ProductCardState extends State<ProductCard> {
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: InkWell(
         onTap: widget.onTap,
+        onLongPress: widget.onLongPress,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -148,31 +151,40 @@ class _ProductCardState extends State<ProductCard> {
                 
                 // Botón de like
                
-                Positioned(
-                  bottom: 8,
-                  right: 8,
-                  child: GestureDetector(
-                    onTap: _toggleLike,
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                      child: _isLiking
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Icon(
-                              widget.product.isLiked ? Icons.favorite : Icons.favorite_border,
-                              color: widget.product.isLiked ? Colors.red : Colors.grey,
-                              size: 20,
-                            ),
-                    ),
-                  ),
-                ),
+                // En el Stack de _buildProductImage, verifica el botón de like:
+                    // En lib/widgets/product_card.dart - reemplaza el botón de like:
+                    if (widget.showLikeButton)
+  Positioned(
+    top: 8,
+    left: 8,
+    child: GestureDetector(
+      onTap: widget.onLike ?? _toggleLike,
+      child: Material(
+        color: Colors.transparent,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: widget.product.isLiked
+                ? Colors.red.withOpacity(0.9)
+                : Colors.white.withOpacity(0.9),
+            shape: BoxShape.circle,
+          ),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: Icon(
+              widget.product.isLiked 
+                ? Icons.favorite 
+                : Icons.favorite_border,
+              color: widget.product.isLiked ? Colors.white : Colors.grey,
+              size: 20,
+              key: ValueKey<bool>(widget.product.isLiked),
+            ),
+          ),
+        ),
+      ),
+    ),
+  ),
               ],
             ),
 

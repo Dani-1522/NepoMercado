@@ -60,6 +60,206 @@ const productController = {
   }
 }, 
 
+  async updateProduct(req, res) {
+    try {
+      const { name, price, description } = req.body;
+      const productId = req.params.id;
+
+      const product = await Product.findById(productId);
+      
+      if (!product) {
+        return res.status(404).json({
+          success: false,
+          message: 'Producto no encontrado'
+        });
+      }
+
+      // Verificar que el usuario es el dueño del producto
+      if (product.userId.toString() !== req.user._id.toString()) {
+        return res.status(403).json({
+          success: false,
+          message: 'No tienes permiso para editar este producto'
+        });
+      }
+
+      // Actualizar campos
+      if (name) product.name = name.trim();
+      if (price) product.price = parseFloat(price);
+      if (description) product.description = description.trim();
+
+      // Manejar nuevas imágenes si se enviaron
+      if (req.files && req.files.length > 0) {
+        console.log('🖼️ Actualizando imágenes del producto...');
+        
+        // Subir nuevas imágenes a Cloudinary
+        const uploadPromises = req.files.map(file => 
+          CloudinaryService.uploadImage(file.buffer)
+        );
+        
+        const uploadResults = await Promise.all(uploadPromises);
+        const newImageUrls = uploadResults.map(result => result.secure_url);
+        
+        // Reemplazar las imágenes existentes
+        product.imageUrls = newImageUrls;
+      }
+
+      await product.save();
+      await product.populate('userId', 'name phone');
+
+      res.json({
+        success: true,
+        message: 'Producto actualizado exitosamente',
+        data: { product }
+      });
+
+    } catch (error) {
+      console.error('Error actualizando producto:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error interno del servidor'
+      });
+    }
+  },
+
+  // ✅ NUEVO: Eliminar producto
+  async deleteProduct(req, res) {
+    try {
+      const productId = req.params.id;
+
+      const product = await Product.findById(productId);
+      
+      if (!product) {
+        return res.status(404).json({
+          success: false,
+          message: 'Producto no encontrado'
+        });
+      }
+
+      // Verificar que el usuario es el dueño del producto
+      if (product.userId.toString() !== req.user._id.toString()) {
+        return res.status(403).json({
+          success: false,
+          message: 'No tienes permiso para eliminar este producto'
+        });
+      }
+
+      // TODO: Opcional - Eliminar imágenes de Cloudinary
+      // await CloudinaryService.deleteImages(product.imageUrls);
+
+      await Product.findByIdAndDelete(productId);
+
+      res.json({
+        success: true,
+        message: 'Producto eliminado exitosamente'
+      });
+
+    } catch (error) {
+      console.error('Error eliminando producto:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error interno del servidor'
+      });
+    }
+  },
+
+  // ✅ NUEVO: Búsqueda y filtros de productos
+async searchProducts(req, res) {
+  try {
+    const {
+      query,
+      category,
+      minPrice,
+      maxPrice,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+      page = 1,
+      limit = 10
+    } = req.query;
+
+    // Construir filtro
+    const filter = {};
+
+    // Filtro por texto (búsqueda)
+    if (query && query.trim() !== '') {
+      filter.$or = [
+        { name: { $regex: query.trim(), $options: 'i' } },
+        { description: { $regex: query.trim(), $options: 'i' } }
+      ];
+    }
+
+    // Filtro por categoría (para futura implementación)
+    if (category && category !== 'all') {
+      // filter.category = category; // Cuando implementes categorías
+    }
+
+    // Filtro por precio
+    if (minPrice || maxPrice) {
+      filter.price = {};
+      if (minPrice) filter.price.$gte = parseFloat(minPrice);
+      if (maxPrice) filter.price.$lte = parseFloat(maxPrice);
+    }
+
+    // Configurar ordenamiento
+    const sortOptions = {};
+    sortOptions[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+    // Calcular paginación
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    console.log('🔍 Filtros de búsqueda:', filter);
+    console.log('📊 Opciones de ordenamiento:', sortOptions);
+
+    // Ejecutar consulta
+    const products = await Product.find(filter)
+      .populate('userId', 'name phone')
+      .sort(sortOptions)
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await Product.countDocuments(filter);
+
+    // Obtener estadísticas para los filtros
+    const priceStats = await Product.aggregate([
+      { $match: filter },
+      {
+        $group: {
+          _id: null,
+          minPrice: { $min: '$price' },
+          maxPrice: { $max: '$price' },
+          avgPrice: { $avg: '$price' }
+        }
+      }
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        products,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total,
+          pages: Math.ceil(total / parseInt(limit))
+        },
+        filters: {
+          priceRange: priceStats.length > 0 ? {
+            min: priceStats[0].minPrice,
+            max: priceStats[0].maxPrice,
+            avg: priceStats[0].avgPrice
+          } : { min: 0, max: 0, avg: 0 }
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Error en búsqueda de productos:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor'
+    });
+  }
+},
+
   async toggleLike(req, res) {
     try {
       const product = await Product.findById(req.params.id);
@@ -70,7 +270,7 @@ const productController = {
           message: 'Producto no encontrado'
         });
       }
-      const userId = req.user._id;
+      const userId = req.user._id.toString();
       const hasLiked = product.likes.includes(userId);
 
       if (hasLiked) {
@@ -81,13 +281,15 @@ const productController = {
         product.likeCount += 1;
       }
       await product.save();
+      const newLikedState = !hasLiked;
 
       res.json({
         success: true,
         message: hasLiked ? 'Like removido' : 'Like agregado',
         data: {
+          liked: newLikedState,
           likeCount: product.likeCount,
-          likes: product.likes
+          
         }
       });
     } catch (error) {

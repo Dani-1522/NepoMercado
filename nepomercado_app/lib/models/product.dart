@@ -4,13 +4,15 @@ class Product {
   final double price;
   final String description;
   final List<String> imageUrls;
-  final String userId;
+
+  final Map<String, dynamic> userId;  // <--- CAMBIO IMPORTANTE
+
   final String? artisanName;
   final String? artisanPhone;
   final DateTime createdAt;
-  final List<String> likes;
-  final int likeCount;
-  final bool isLiked;
+
+  int likeCount;
+  bool isLiked;
 
   Product({
     required this.id,
@@ -18,11 +20,10 @@ class Product {
     required this.price,
     required this.description,
     required this.imageUrls,
-    required this.userId,
+    required this.userId,   // <--- ahora requerido
     this.artisanName,
     this.artisanPhone,
     required this.createdAt,
-    this.likes = const [],
     this.likeCount = 0,
     this.isLiked = false,
   });
@@ -33,58 +34,37 @@ class Product {
       name: json['name'] ?? '',
       price: (json['price'] ?? 0).toDouble(),
       description: json['description'] ?? '',
-      imageUrls: List<String>.from(json['imageUrls'] ?? []), 
-      userId: json['userId'] is String 
-          ? json['userId'] 
-          : json['userId']?['_id'] ?? '',
-      artisanName: json['userId'] is Map 
-          ? json['userId']['name'] 
-          : null,
-      artisanPhone: json['userId'] is Map 
-          ? json['userId']['phone'] 
-          : null,
-      likes: List<String>.from(json['likes'] ?? []),
+      imageUrls: json['imageUrls'] != null
+          ? List<String>.from(json['imageUrls'])
+          : [],
+      
+      userId: json['userId'] ?? {},   // <--- now a Map
+      
+      artisanName: json['userId']?['name'],     // opcional
+      artisanPhone: json['userId']?['phone'],   // opcional
+
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'])
+          : DateTime.now(),
+
       likeCount: json['likeCount'] ?? 0,
       isLiked: json['isLiked'] ?? false,
-      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toString()),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'name': name,
-      'price': price,
-      'description': description,
-      'imageUrls': imageUrls,
+      "id": id,
+      "name": name,
+      "price": price,
+      "description": description,
+      "imageUrls": imageUrls,
+      "userId": userId,  
+      "artisanName": artisanName,
+      "artisanPhone": artisanPhone,
+      "createdAt": createdAt.toIso8601String(),
+      "likeCount": likeCount,
+      "isLiked": isLiked,
     };
-  }
-   Product copyWith({
-    String? id,
-    String? name,
-    double? price,
-    String? description,
-    List<String>? imageUrls,
-    String? userId,
-    String? artisanName,
-    String? artisanPhone,
-    DateTime? createdAt,
-    List<String>? likes,
-    int? likeCount,
-    bool? isLiked,
-  }) {
-    return Product(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      price: price ?? this.price,
-      description: description ?? this.description,
-      imageUrls: imageUrls ?? this.imageUrls,
-      userId: userId ?? this.userId,
-      artisanName: artisanName ?? this.artisanName,
-      artisanPhone: artisanPhone ?? this.artisanPhone,
-      createdAt: createdAt ?? this.createdAt,
-      likes: likes ?? this.likes,
-      likeCount: likeCount ?? this.likeCount,
-      isLiked: isLiked ?? this.isLiked,
-    );
   }
 }

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:nepomercado_app/models/search_filters.dart';
 import '../config/constants.dart';
 import '../models/api_response.dart';
 import '../models/product.dart';
@@ -208,6 +209,96 @@ class ApiService {
   }
 }
 
+  // ✅ NUEVO: Actualizar producto
+Future<ApiResponse<Product>> updateProduct({
+  required String productId,
+  required String name,
+  required double price,
+  required String description,
+  required List<File> images,
+}) async {
+  try {
+    final token = await _storage.getToken();
+    
+    print('🔄 ACTUALIZANDO PRODUCTO: $productId');
+
+    var request = http.MultipartRequest(
+      'PUT',
+      Uri.parse('$_baseUrl/products/$productId'),
+    );
+
+    request.headers['Authorization'] = 'Bearer $token';
+
+    // Campos de texto
+    request.fields['name'] = name;
+    request.fields['price'] = price.toString();
+    request.fields['description'] = description;
+
+    // Agregar nuevas imágenes
+    for (int i = 0; i < images.length; i++) {
+      final image = images[i];
+      final mimeType = _getMimeType(image.path);
+      
+      request.files.add(await http.MultipartFile.fromPath(
+        'images',
+        image.path,
+        contentType: MediaType.parse(mimeType),
+      ));
+    }
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+    
+    final data = json.decode(response.body);
+    final apiResponse = ApiResponse.fromJson(data);
+
+    if (apiResponse.success && apiResponse.data != null) {
+      final product = Product.fromJson(apiResponse.data['product']);
+      return ApiResponse(
+        success: true,
+        message: apiResponse.message,
+        data: product,
+      );
+    }
+
+    return ApiResponse(
+      success: false,
+      message: apiResponse.message,
+    );
+
+  } catch (e) {
+    print('💥 ERROR en updateProduct: $e');
+    return ApiResponse(
+      success: false,
+      message: 'Error al actualizar producto: $e',
+    );
+  }
+}
+
+// ✅ NUEVO: Eliminar producto
+Future<ApiResponse<dynamic>> deleteProduct(String productId) async {
+  try {
+    final token = await _storage.getToken();
+    
+    final response = await http.delete(
+      Uri.parse('$_baseUrl/products/$productId'),
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    final data = json.decode(response.body);
+    return ApiResponse.fromJson(data);
+
+  } catch (e) {
+    print('💥 ERROR en deleteProduct: $e');
+    return ApiResponse(
+      success: false,
+      message: 'Error al eliminar producto: $e',
+    );
+  }
+}
+
   Future<ApiResponse<List<Product>>> getMyProducts() async {
     try {
       final response = await http.get(
@@ -240,7 +331,8 @@ class ApiService {
       );
     }
   }
- Future<ApiResponse<Map<String, dynamic>>> toggleLike(String productId) async {
+  
+  Future<ApiResponse<Map<String, dynamic>>> toggleLike(String productId) async {
     try {
       final token = await _storage.getToken();
       
@@ -253,6 +345,7 @@ class ApiService {
       );
 
       final data = json.decode(response.body);
+      
       return ApiResponse.fromJson(data);
 
     } catch (e) {
@@ -264,6 +357,55 @@ class ApiService {
     }
   }
 
+  // ✅ NUEVO: Búsqueda con filtros
+  Future<ApiResponse<Map<String, dynamic>>> searchProducts(SearchFilters filters) async {
+    try {
+      // Construir URL con parámetros de consulta
+      final uri = Uri.parse('$_baseUrl/products/search/all').replace(
+        queryParameters: filters.toQueryParams(),
+      );
+
+      print('🔍 Buscando productos: ${uri.toString()}');
+
+      final response = await http.get(
+        uri,
+        headers: await _getHeaders(),
+      );
+
+      final data = json.decode(response.body);
+      final apiResponse = ApiResponse.fromJson(data);
+
+      if (apiResponse.success && apiResponse.data != null) {
+        // Convertir productos
+        final products = (apiResponse.data['products'] as List)
+            .map((item) => Product.fromJson(item))
+            .toList();
+
+        return ApiResponse(
+          success: true,
+          message: apiResponse.message,
+          data: {
+            'products': products,
+            'pagination': apiResponse.data['pagination'],
+            'filters': apiResponse.data['filters'],
+          },
+        );
+      }
+
+      return ApiResponse(
+        success: false,
+        message: apiResponse.message,
+      );
+
+    } catch (e) {
+      print('💥 ERROR en searchProducts: $e');
+      return ApiResponse(
+        success: false,
+        message: 'Error en búsqueda: $e',
+      );
+    }
+  }
+  
   // ✅ NUEVO: Obtener productos likeados
   Future<ApiResponse<List<Product>>> getLikedProducts() async {
     try {

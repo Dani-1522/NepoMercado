@@ -65,9 +65,9 @@ class _LikedProductsScreenState extends State<LikedProductsScreen> {
           artisanName: product.artisanName,
           artisanPhone: product.artisanPhone,
           createdAt: product.createdAt,
-          likes: product.likes,
-          likeCount: response.data?['likeCount'] ?? product.likeCount,
-          isLiked: response.data?['liked'] ?? false,
+          likeCount: product.likeCount,
+          isLiked: product.isLiked,
+          
         );
         
         // Si se quitó el like, remover de la lista

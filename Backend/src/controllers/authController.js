@@ -98,51 +98,77 @@ const authController = {
   },
   
   async forgotPassword(req, res) {
+  try {
+    const { phone } = req.body;
+
+    console.log('📞 Solicitando recuperación para:', phone);
+
+    // Validar formato de teléfono
+    if (!phone || phone.length < 10) {
+      return res.status(400).json({
+        success: false,
+        message: 'Número de teléfono inválido. Debe tener al menos 10 dígitos.'
+      });
+    }
+
+    const user = await User.findOne({ phone });
+    if (!user) {
+      // Por seguridad, no revelar que el usuario no existe
+      console.log('📞 Usuario no encontrado para:', phone);
+      return res.json({
+        success: true, // ✅ Devuelve éxito aunque no exista por seguridad
+        message: 'Si el número está registrado, recibirás un código por WhatsApp.'
+      });
+    }
+
+    // Generar código de 6 dígitos
+    const recoveryCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const recoveryCodeExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutos
+
+    user.recoveryCode = recoveryCode;
+    user.recoveryCodeExpires = recoveryCodeExpires;
+    await user.save();
+
+    console.log('🔐 Código generado para', phone, ':', recoveryCode);
+
+    // Enviar código por WhatsApp
+    const message = `🔐 Código de recuperación - Artesanos App\n\n` +
+                   `Tu código de verificación es: *${recoveryCode}*\n\n` +
+                   `Este código expira en 15 minutos.\n\n` +
+                   `Si no solicitaste este código, ignora este mensaje.`;
+
     try {
-      const { phone } = req.body;
-      
-      if (!phone || phone.length < 10) {
-        return res.status(400).json({
-          success: false,
-          message: 'Número de teléfono inválido'
-        });
-      }
-
-      const user = await User.findOne({ phone });
-      if (!user) {
-        return res.status(404).json({
-          success: false,
-          message: 'No existe usuario con este número'
-        });
-      }
-
-      // Generar código de 6 dígitos
-      const recoveryCode = Math.floor(100000 + Math.random() * 900000).toString();
-      const recoveryCodeExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutos
-
-      user.recoveryCode = recoveryCode;
-      user.recoveryCodeExpires = recoveryCodeExpires;
-      await user.save();
-
-      // Enviar código por SMS o WhatsApp
-      const message = `Tu código de recuperación es: ${recoveryCode}. Válido por 15 minutos.`;
-      
-     const simpleMessage = `Codigo de recuperacio de NepoMercado - Tu código de recuperación es: ${recoveryCode}. Válido por 15 minutos.`;
-      await sendWhatsApp(phone, simpleMessage);
+      console.log('📤 Intentando enviar WhatsApp...');
+      await sendWhatsApp(phone, message);
+      console.log('✅ WhatsApp enviado exitosamente');
 
       res.json({
         success: true,
-        message: 'Código de recuperación enviado'
+        message: 'Código de recuperación enviado por WhatsApp'
       });
 
-    } catch (error) {
-      console.error('Error en forgotPassword:', error);
-      res.status(500).json({
+    } catch (whatsappError) {
+      console.error('❌ Error enviando WhatsApp:', whatsappError.message);
+      
+      // Si falla WhatsApp, limpiar el código
+      user.recoveryCode = null;
+      user.recoveryCodeExpires = null;
+      await user.save();
+
+      return res.status(500).json({
         success: false,
-        message: 'Error interno del servidor'
+        message: 'Error enviando WhatsApp. Por favor intenta más tarde.'
       });
     }
-  },
+
+  } catch (error) {
+    console.error('❌ Error en forgotPassword:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor'
+    });
+  }
+},
 
   // ✅ NUEVO: Verificar código
   async verifyRecoveryCode(req, res) {
