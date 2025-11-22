@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:nepomercado_app/models/product.dart';
-import 'package:nepomercado_app/screens/auth/reset_password_screen.dart';
-import 'package:nepomercado_app/screens/auth/verify_code_screen.dart';
-import 'package:nepomercado_app/screens/products/edit_product_screen.dart';
-import 'package:nepomercado_app/screens/products/search_screen.dart';
+import 'package:NepoMercado/models/product.dart';
+import 'package:NepoMercado/screens/auth/reset_password_screen.dart';
+import 'package:NepoMercado/screens/auth/verify_code_screen.dart';
+import 'package:NepoMercado/screens/products/edit_product_screen.dart';
+import 'package:NepoMercado/screens/products/search_screen.dart';
 import 'package:provider/provider.dart';
 import 'services/auth_service.dart';
 import 'screens/auth/login_screen.dart';
@@ -44,7 +44,6 @@ class MyApp extends StatelessWidget {
                     Navigator.pushReplacementNamed(context, '/login'),
               ),
           '/home': (context) => const HomeScreen(),
-          // ✅ NUEVAS RUTAS
           '/liked-products': (context) => const LikedProductsScreen(),
           '/forgot-password': (context) => const ForgotPasswordScreen(),
           '/search': (context) => const SearchScreen(),
@@ -54,7 +53,7 @@ class MyApp extends StatelessWidget {
           },
 
         },
-        // ✅ MEJORA: Manejar rutas con parámetros
+        //Manejar rutas con parámetros
         onGenerateRoute: (settings) {
           // Para rutas que necesitan parámetros como verify-code y reset-password
           if (settings.name == '/verify-code') {
@@ -102,20 +101,9 @@ class AuthWrapper extends StatelessWidget {
               );
             }
 
-            // ✅ MEJORA: Usuario NO necesita estar logueado para ver productos
-            // Siempre mostrar HomeScreen, el login será opcional
+           
             return const HomeScreen();
-            
-            // ❌ CÓDIGO ANTERIOR (comentado):
-            // final isLoggedIn = snapshot.data ?? false;
-            // if (isLoggedIn) {
-            //   return const HomeScreen();
-            // } else {
-            //   return LoginScreen(
-            //     onRegisterPressed: () =>
-            //         Navigator.pushReplacementNamed(context, '/register'),
-            //   );
-            // }
+           
           },
         );
       },

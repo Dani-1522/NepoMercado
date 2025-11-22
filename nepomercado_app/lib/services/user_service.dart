@@ -1,4 +1,4 @@
-// services/user_service.dart
+
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
@@ -46,7 +46,7 @@ class UserService {
         message: data['message']?.toString() ?? 'Error al obtener perfil',
       );
     } catch (e) {
-      print('💥 ERROR en getMyProfile: $e');
+      print('ERROR en getMyProfile: $e');
       return ApiResponse(
         success: false,
         message: 'Error de conexión: $e',
@@ -54,6 +54,37 @@ class UserService {
     }
   }
 
+  // Obtener perfil de otro usuario por ID
+Future<ApiResponse<User>> getUserProfile(String userId) async {
+  try {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/users/$userId'),
+      headers: await _getHeaders(),
+    );
+
+    final data = json.decode(response.body);
+    
+    if (data['success'] == true) {
+      final user = User.fromJson(data['data']['user']);
+      return ApiResponse(
+        success: true,
+        message: data['message']?.toString() ?? 'Perfil obtenido',
+        data: user,
+      );
+    }
+
+    return ApiResponse(
+      success: false,
+      message: data['message']?.toString() ?? 'Error al obtener perfil',
+    );
+  } catch (e) {
+    print('ERROR en getUserProfile: $e');
+    return ApiResponse(
+      success: false,
+      message: 'Error de conexión: $e',
+    );
+  }
+}
   // Actualizar información básica
   Future<ApiResponse<User>> updateProfile({
     required String name,
@@ -85,7 +116,7 @@ class UserService {
         message: data['message']?.toString() ?? 'Error al actualizar perfil',
       );
     } catch (e) {
-      print('💥 ERROR en updateProfile: $e');
+      print('ERROR en updateProfile: $e');
       return ApiResponse(
         success: false,
         message: 'Error de conexión: $e',
@@ -93,6 +124,39 @@ class UserService {
     }
   }
 
+  // Buscar vendedores por nombre o ID
+  Future<ApiResponse<List<User>>> searchVendors(String query) async {
+  try {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/users/search/vendors?query=$query'),
+      headers: await _getHeaders(),
+    );
+
+    final data = json.decode(response.body);
+    
+    if (data['success'] == true) {
+      final vendors = (data['data']['users'] as List)
+          .map((item) => User.fromJson(item))
+          .toList();
+      return ApiResponse(
+        success: true,
+        message: data['message']?.toString() ?? 'Vendedores encontrados',
+        data: vendors,
+      );
+    }
+
+    return ApiResponse(
+      success: false,
+      message: data['message']?.toString() ?? 'Error buscando vendedores',
+    );
+  } catch (e) {
+    print('ERROR en searchVendors: $e');
+    return ApiResponse(
+      success: false,
+      message: 'Error de conexión: $e',
+    );
+  }
+}
   // Cambiar contraseña
   Future<ApiResponse<dynamic>> changePassword({
     required String currentPassword,
@@ -116,7 +180,7 @@ class UserService {
           (data['success'] == true ? 'Contraseña actualizada' : 'Error al cambiar contraseña'),
       );
     } catch (e) {
-      print('💥 ERROR en changePassword: $e');
+      print('ERROR en changePassword: $e');
       return ApiResponse(
         success: false,
         message: 'Error de conexión: $e',
@@ -161,7 +225,7 @@ class UserService {
         message: data['message']?.toString() ?? 'Error al subir imagen',
       );
     } catch (e) {
-      print('💥 ERROR en uploadProfileImage: $e');
+      
       return ApiResponse(
         success: false,
         message: 'Error de conexión: $e',
@@ -193,7 +257,7 @@ class UserService {
         message: data['message']?.toString() ?? 'Error al eliminar imagen',
       );
     } catch (e) {
-      print('💥 ERROR en deleteProfileImage: $e');
+     
       return ApiResponse(
         success: false,
         message: 'Error de conexión: $e',

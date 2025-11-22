@@ -1,12 +1,17 @@
 import 'dart:async';
 
+import 'package:NepoMercado/models/user.dart';
 import 'package:flutter/material.dart';
+import 'package:NepoMercado/widgets/category_selector.dart';
 import '../../services/api_service.dart';
+import '../../services/user_service.dart';
 import '../../models/product.dart';
 import '../../models/search_filters.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/loading_indicator.dart';
 import 'product_detail_screen.dart';
+import '../profile/vendor_profile_screen.dart';
+import '../../widgets/vendor_result_card.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({Key? key}) : super(key: key);
@@ -17,6 +22,7 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   final ApiService _apiService = ApiService();
+  final UserService _userService = UserService();
   final TextEditingController _searchController = TextEditingController();
 
   List<Product> _products = [];
@@ -25,12 +31,18 @@ class _SearchScreenState extends State<SearchScreen> {
   bool _hasMore = true;
   final int _resultsPerPage = 20;
 
-  // Estados para el drawer de filtros
+ 
   double _minPrice = 0;
   double _maxPrice = 10000;
   double _currentMinPrice = 0;
   double _currentMaxPrice = 10000;
   String _selectedSort = 'createdAt';
+
+  List<User> _vendors = [];
+  List<User> _filteredVendors = [];
+  bool _showVendors = false;
+
+  Timer? _searchTimer;
 
   @override
   void initState() {
@@ -38,9 +50,53 @@ class _SearchScreenState extends State<SearchScreen> {
     _loadInitialProducts();
   }
 
+  @override
+  void dispose() {
+    _searchTimer?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadInitialProducts() async {
     setState(() => _isLoading = true);
     await _performSearch(resetPagination: true);
+  }
+
+  Future<void> _searchVendors(String query) async {
+    if (query.isEmpty) {
+      setState(() {
+        _vendors = [];
+        _filteredVendors = [];
+        _showVendors = false;
+      });
+      return;
+    }
+    try {
+      final response = await _userService.searchVendors(query);
+      
+      if (response.success && response.data != null) {
+        setState(() {
+          _vendors = response.data!;
+          _filteredVendors = _vendors;
+          _showVendors = _vendors.isNotEmpty;
+        });
+      }
+    } catch (e) {
+      print('💥 Error buscando vendedores: $e');
+    }
+  }
+
+  void _onSearchChanged(String value) {
+    _filters = _filters.copyWith(query: value, page: 1);
+    _debouncedSearch();
+    _searchVendors(value);
+  }
+
+  void _debouncedSearch() {
+    _searchTimer?.cancel();
+    _searchTimer = Timer(const Duration(milliseconds: 500), () {
+      _performSearch(resetPagination: true);
+    });
   }
 
   Future<void> _performSearch({bool resetPagination = false}) async {
@@ -66,7 +122,7 @@ class _SearchScreenState extends State<SearchScreen> {
         }
         _hasMore = _filters.page < pagination['pages'];
         
-        // Actualizar rangos de precio
+      
         final filtersData = response.data!['filters'] as Map<String, dynamic>;
         final priceRange = filtersData['priceRange'] as Map<String, dynamic>;
         _minPrice = (priceRange['min'] ?? 0).toDouble();
@@ -84,27 +140,13 @@ class _SearchScreenState extends State<SearchScreen> {
     }
   }
 
-  void _onSearchChanged(String value) {
-    _filters = _filters.copyWith(query: value, page: 1);
-    _debouncedSearch();
-  }
-
-  void _debouncedSearch() {
-    // Cancelar búsqueda anterior
-    _searchTimer?.cancel();
-    // Programar nueva búsqueda después de 500ms
-    _searchTimer = Timer(const Duration(milliseconds: 500), () {
-      _performSearch(resetPagination: true);
-    });
-  }
-
-  Timer? _searchTimer;
-
-  @override
-  void dispose() {
-    _searchTimer?.cancel();
-    _searchController.dispose();
-    super.dispose();
+  void _navigateToVendorProfile(String userId) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => VendorProfileScreen(userId: userId),
+      ),
+    );
   }
 
   void _navigateToProductDetail(Product product) {
@@ -127,6 +169,7 @@ class _SearchScreenState extends State<SearchScreen> {
           price: product.price,
           description: product.description,
           imageUrls: product.imageUrls,
+          category: product.category,
           userId: product.userId,
           artisanName: product.artisanName,
           artisanPhone: product.artisanPhone,
@@ -146,7 +189,7 @@ class _SearchScreenState extends State<SearchScreen> {
       sortBy: _selectedSort,
       page: 1,
     );
-    Navigator.pop(context); // Cerrar drawer
+    Navigator.pop(context);
     _performSearch(resetPagination: true);
   }
 
@@ -162,14 +205,25 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Buscar Productos'),
+        title: const Text(
+          'Buscar Productos y Vendedores',
+          style: TextStyle(
+            color: Color(0xFF202124),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 1,
+        iconTheme: const IconThemeData(color: Color(0xFF0F4C5C)),
+        foregroundColor: const Color(0xFF0F4C5C),
         actions: [
           IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: () => _showFilterDrawer(),
+            icon: const Icon(Icons.filter_list, color: Color(0xFF3A9188)),
+            onPressed: _showFilterDrawer,
           ),
         ],
       ),
+      backgroundColor: const Color(0xFFF4EDE4), 
       body: SafeArea(
         bottom: true,
         child: Column(
@@ -181,26 +235,66 @@ class _SearchScreenState extends State<SearchScreen> {
                 controller: _searchController,
                 onChanged: _onSearchChanged,
                 decoration: InputDecoration(
-                  hintText: 'Buscar productos...',
-                  prefixIcon: const Icon(Icons.search),
+                  hintText: 'Buscar productos o vendedores...',
+                  hintStyle: const TextStyle(color: Color(0xFF64748B)),
+                  prefixIcon: const Icon(Icons.search, color: Color(0xFF3A9188)),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: const Color(0xFF3A9188).withOpacity(0.3)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF0F4C5C), width: 2),
                   ),
                   filled: true,
-                  fillColor: Colors.grey[50],
+                  fillColor: Colors.white,
                 ),
+              ),
+            ),
+
+            // Sección de vendedores
+            if (_showVendors) _buildVendorsSection(),
+
+            // Selector de categorías
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: CategorySelector(
+                selectedCategory: _filters.category,
+                onCategoryChanged: (category) {
+                  setState(() {
+                    _filters = _filters.copyWith(category: category, page: 1);
+                  });
+                  _performSearch(resetPagination: true);
+                },
               ),
             ),
 
             // Indicador de filtros activos
             if (_filters.hasActiveFilters)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF3A9188).withOpacity(0.2)),
+                ),
                 child: Row(
                   children: [
-                    Chip(
-                      label: const Text('Filtros activos'),
-                      backgroundColor: Colors.blue[50],
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F4C5C).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        'Filtros activos',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF0F4C5C),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -219,7 +313,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.clear, size: 18),
+                      icon: const Icon(Icons.clear, size: 18, color: Color(0xFFE9965C)),
                       onPressed: _clearFilters,
                     ),
                   ],
@@ -230,25 +324,8 @@ class _SearchScreenState extends State<SearchScreen> {
             Expanded(
               child: _isLoading && _products.isEmpty
                   ? const LoadingIndicator(message: 'Buscando productos...')
-                  : _products.isEmpty
-                      ? const Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.search_off, size: 64, color: Colors.grey),
-                              SizedBox(height: 16),
-                              Text(
-                                'No se encontraron productos',
-                                style: TextStyle(fontSize: 16, color: Colors.grey),
-                              ),
-                              SizedBox(height: 8),
-                              Text(
-                                'Intenta con otros términos de búsqueda',
-                                style: TextStyle(color: Colors.grey),
-                              ),
-                            ],
-                          ),
-                        )
+                  : _products.isEmpty && _vendors.isEmpty
+                      ? _buildEmptyState()
                       : NotificationListener<ScrollNotification>(
                           onNotification: (scrollInfo) {
                             if (scrollInfo.metrics.pixels ==
@@ -278,12 +355,121 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
+  Widget _buildVendorsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFF3A9188).withOpacity(0.2)),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.people, color: Color(0xFF3A9188), size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Emprendedores (${_filteredVendors.length})',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF0F4C5C),
+                ),
+              ),
+            ],
+          ),
+        ),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: _filteredVendors.length,
+          itemBuilder: (context, index) {
+            final vendor = _filteredVendors[index];
+            return VendorResultCard(
+              vendor: vendor,
+              onTap: () => _navigateToVendorProfile(vendor.id),
+            );
+          },
+        ),
+        const Divider(
+          color: Color(0xFF3A9188),
+          height: 1,
+          thickness: 0.5,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                color: const Color(0xFF3A9188).withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                _searchController.text.isEmpty ? Icons.search : Icons.search_off,
+                size: 50,
+                color: Color(0xFF3A9188),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              _searchController.text.isEmpty
+                  ? 'Busca productos o emprendedores'
+                  : 'No se encontraron resultados',
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF0F4C5C),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              _searchController.text.isEmpty
+                  ? 'Encuentra productos únicos y conecta con emprendedores locales'
+                  : 'Intenta con otros términos de búsqueda o ajusta los filtros',
+              style: const TextStyle(
+                fontSize: 16,
+                color: Color(0xFF64748B),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildFilterChip(String label) {
     return Container(
       margin: const EdgeInsets.only(right: 8),
-      child: Chip(
-        label: Text(label, style: const TextStyle(fontSize: 12)),
-        backgroundColor: Colors.orange[50],
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE9965C).withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE9965C).withOpacity(0.3)),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            color: Color(0xFF0F4C5C),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
       ),
     );
   }
@@ -293,8 +479,21 @@ class _SearchScreenState extends State<SearchScreen> {
       padding: const EdgeInsets.all(16.0),
       child: Center(
         child: _hasMore
-            ? const CircularProgressIndicator()
-            : const Text('No hay más productos'),
+            ? const CircularProgressIndicator(color: Color(0xFF0F4C5C))
+            : Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'No hay más productos',
+                  style: TextStyle(
+                    color: Color(0xFF64748B),
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
       ),
     );
   }
@@ -303,8 +502,23 @@ class _SearchScreenState extends State<SearchScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) => SafeArea(
-        child: _buildFilterSheet(),
+        child: Container(
+          margin: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: _buildFilterSheet(),
+        ),
       ),
     );
   }
@@ -313,22 +527,46 @@ class _SearchScreenState extends State<SearchScreen> {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Filtros',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            'Filtros de Búsqueda',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF0F4C5C),
+            ),
           ),
           const SizedBox(height: 16),
 
           // Filtro por precio
-          const Text('Rango de Precio', style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
+          const Text(
+            'Rango de Precio',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF0F4C5C),
+            ),
+          ),
+          const SizedBox(height: 12),
           Row(
             children: [
-              Text('\$${_currentMinPrice.toStringAsFixed(0)}'),
+              Text(
+                '\$${_currentMinPrice.toStringAsFixed(0)}',
+                style: const TextStyle(
+                  color: Color(0xFF0F4C5C),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
               const Spacer(),
-              Text('\$${_currentMaxPrice.toStringAsFixed(0)}'),
+              Text(
+                '\$${_currentMaxPrice.toStringAsFixed(0)}',
+                style: const TextStyle(
+                  color: Color(0xFF0F4C5C),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ],
           ),
           RangeSlider(
@@ -336,6 +574,8 @@ class _SearchScreenState extends State<SearchScreen> {
             min: _minPrice,
             max: _maxPrice,
             divisions: 20,
+            activeColor: const Color(0xFF0F4C5C),
+            inactiveColor: const Color(0xFF3A9188).withOpacity(0.3),
             labels: RangeLabels(
               '\$${_currentMinPrice.toStringAsFixed(0)}',
               '\$${_currentMaxPrice.toStringAsFixed(0)}',
@@ -350,20 +590,35 @@ class _SearchScreenState extends State<SearchScreen> {
           const SizedBox(height: 24),
 
           // Ordenamiento
-          const Text('Ordenar por', style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          DropdownButton<String>(
-            value: _selectedSort,
-            isExpanded: true,
-            items: const [
-              DropdownMenuItem(value: 'createdAt', child: Text('Más recientes')),
-              DropdownMenuItem(value: 'price', child: Text('Precio menor a mayor')),
-              DropdownMenuItem(value: 'priceDesc', child: Text('Precio mayor a menor')),
-              DropdownMenuItem(value: 'name', child: Text('Nombre A-Z')),
-            ],
-            onChanged: (value) {
-              setState(() => _selectedSort = value!);
-            },
+          const Text(
+            'Ordenar por',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF0F4C5C),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: const Color(0xFF3A9188).withOpacity(0.3)),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: DropdownButton<String>(
+              value: _selectedSort,
+              isExpanded: true,
+              dropdownColor: Colors.white,
+              style: const TextStyle(color: Color(0xFF202124)),
+              items: const [
+                DropdownMenuItem(value: 'createdAt', child: Text('Más recientes')),
+                DropdownMenuItem(value: 'price', child: Text('Precio menor a mayor')),
+                DropdownMenuItem(value: 'priceDesc', child: Text('Precio mayor a menor')),
+                DropdownMenuItem(value: 'name', child: Text('Nombre A-Z')),
+              ],
+              onChanged: (value) {
+                setState(() => _selectedSort = value!);
+              },
+            ),
           ),
           const SizedBox(height: 32),
 
@@ -373,14 +628,40 @@ class _SearchScreenState extends State<SearchScreen> {
               Expanded(
                 child: OutlinedButton(
                   onPressed: _clearFilters,
-                  child: const Text('Limpiar'),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: Color(0xFF0F4C5C)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: Text(
+                    'Limpiar',
+                    style: TextStyle(
+                      color: Color(0xFF0F4C5C),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: ElevatedButton(
                   onPressed: _applyFilters,
-                  child: const Text('Aplicar'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF3A9188),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text(
+                    'Aplicar',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ),
             ],

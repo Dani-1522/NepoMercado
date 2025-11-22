@@ -37,66 +37,96 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = false);
 
     if (success) {
-      Navigator.pushReplacementNamed(context, '/home');
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Error al iniciar sesión. Verifica tus credenciales.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+  Navigator.pushReplacementNamed(context, '/home');
+} else {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text('Error al iniciar sesión. Verifica tus credenciales.'),
+      backgroundColor: Color(0xFFE9965C), 
+    ),
+  );
+}
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Iniciar Sesión'),
-        elevation: 0,
-      ),
-      body: SafeArea( // ✅ SafeArea para evitar notch
-        child: SingleChildScrollView( // ✅ Scroll cuando aparece teclado
-          padding: const EdgeInsets.all(20),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
+          title: const Text(
+            'Iniciar Sesión',
+            style: TextStyle(
+              color: Color(0xFF0F4C5C), 
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          backgroundColor: Color(0xFFF4EDE4), 
+          elevation: 0, 
+          iconTheme: const IconThemeData(color: Color(0xFF0F4C5C)),
+          foregroundColor: Color(0xFF0F4C5C), 
+        ),
+      body: Container(
+        color: Color(0xFFF4EDE4), 
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24), 
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
                 // Logo o icono
                 const SizedBox(height: 40),
-                Icon(
-                  Icons.account_circle,
-                  size: 80,
-                  color: Theme.of(context).primaryColor,
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  'Bienvenido',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
+                Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      color: Color(0xFF0F4C5C), 
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.person,
+                      size: 50,
+                      color: Colors.white,
+                    ),
                   ),
-                  textAlign: TextAlign.center,
-                ),
+                const SizedBox(height: 24),
+                  Text(
+                    'NepoMercado',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F4C5C), 
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                 const SizedBox(height: 8),
                 Text(
-                  'Inicia sesión en tu cuenta',
+                  'Bienvenido de nuevo, por favor inicia sesión',
                   style: TextStyle(
                     fontSize: 16,
-                    color: Colors.grey[600],
+                    color: Color(0xFF64748B),
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 40),
 
                 // Campo de teléfono
                 TextFormField(
                   controller: _phoneController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Teléfono',
-                    prefixIcon: Icon(Icons.phone),
-                    border: OutlineInputBorder(),
-                   
+                    labelStyle: TextStyle(color: Color(0xFF64748B)),
+                    prefixIcon: Icon(Icons.phone, color: Color(0xFF3A9188)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Color(0xFF3A9188).withOpacity(0.3)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Color(0xFF0F4C5C), width: 2),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
                   ),
                   keyboardType: TextInputType.phone,
                   textInputAction: TextInputAction.next,
@@ -107,18 +137,29 @@ class _LoginScreenState extends State<LoginScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
 
                 // Campo de contraseña
                 TextFormField(
                   controller: _passwordController,
                   decoration: InputDecoration(
                     labelText: 'Contraseña',
-                    prefixIcon: const Icon(Icons.lock),
-                    border: const OutlineInputBorder(),
+                    labelStyle: TextStyle(color: Color(0xFF64748B)),
+                    prefixIcon: Icon(Icons.lock, color: Color(0xFF3A9188)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Color(0xFF3A9188).withOpacity(0.3)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Color(0xFF0F4C5C), width: 2),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                        color: Color(0xFF3A9188),
                       ),
                       onPressed: () {
                         setState(() => _obscurePassword = !_obscurePassword);
@@ -138,57 +179,86 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 8),
 
                 // Enlace de olvidé contraseña
-                Align(
+               Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: widget.onForgotPassword,
-                    child: const Text('¿Olvidaste tu contraseña?'),
+                    child: Text(
+                      '¿Olvidaste tu contraseña?',
+                      style: TextStyle(
+                        color: Color(0xFF0F4C5C), 
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),
 
                 // Botón de login
                 if (_isLoading)
-                  const Center(child: CircularProgressIndicator())
-                else
-                  ElevatedButton(
-                    onPressed: _login,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
+              Center(
+                child: CircularProgressIndicator(
+                  color: Color(0xFF0F4C5C), 
+                ),
+              )
+            else
+              ElevatedButton(
+                onPressed: _login,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF0F4C5C), 
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 2,
+                ),
+                child: const Text(
+                  'Iniciar Sesión',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+              ),
+            const SizedBox(height: 24),
+
+                
+              // Enlace para ir a registro
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Color(0xFF3A9188).withOpacity(0.2)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            '¿No tienes cuenta?',
+                            style: TextStyle(color: Color(0xFF64748B)),
+                          ),
+                          const SizedBox(width: 8),
+                          TextButton(
+                            onPressed: widget.onRegisterPressed,
+                            child: Text(
+                              'Regístrate aquí',
+                              style: TextStyle(
+                                color: Color(0xFF0F4C5C),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    child: const Text(
-                      'Iniciar Sesión',
-                      style: TextStyle(fontSize: 16),
-                    ),
-                  ),
-                const SizedBox(height: 20),
-
-                // Enlace para ir a registro
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text('¿No tienes cuenta?'),
-                    const SizedBox(width: 8),
-                    TextButton(
-                      onPressed: widget.onRegisterPressed,
-                      child: const Text('Regístrate aquí'),
-                    ),
-                  ],
-                ),
-
-                // Espacio extra para evitar overflow
-                const SizedBox(height: 20),
-              ],
+                ],
+              ),  
             ),
           ),
         ),
       ),
     );
-  }
-
+  } 
+        
   @override
   void dispose() {
     _phoneController.dispose();

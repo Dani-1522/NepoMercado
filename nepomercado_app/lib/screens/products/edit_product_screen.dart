@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:NepoMercado/config/categories.dart';
 import 'package:provider/provider.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
@@ -28,6 +29,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
   bool _isLoading = false;
   bool _isDeleting = false;
   final ImagePicker _picker = ImagePicker();
+  String _selectedCategory = 'otros';
 
   @override
   void initState() {
@@ -40,6 +42,27 @@ class _EditProductScreenState extends State<EditProductScreen> {
     _priceController.text = widget.product.price.toString();
     _descriptionController.text = widget.product.description;
     _existingImageUrls = List.from(widget.product.imageUrls);
+    _selectedCategory = widget.product.category ?? 'otros';
+  }
+
+  String _getCategoryDisplayName(String category) {
+    final names = {
+      'todos': 'Todos',
+      'comida': 'Comida',
+      'ropa': 'Ropa',
+      'artesanias': 'Artesanías',
+      'electronica': 'Electrónica',
+      'hogar': 'Hogar',
+      'deportes': 'Deportes',
+      'libros': 'Libros',
+      'joyeria': 'Joyería',
+      'salud': 'Salud',
+      'belleza': 'Belleza',
+      'juguetes': 'Juguetes',
+      'mascotas': 'Mascotas',
+      'otros': 'Otros',
+    };
+    return names[category] ?? category;
   }
 
   Future<void> _pickImages() async {
@@ -112,6 +135,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
         name: _nameController.text.trim(),
         price: double.parse(_priceController.text),
         description: _descriptionController.text.trim(),
+        category: _selectedCategory,
         images: _selectedImages,
       );
 
@@ -133,16 +157,25 @@ class _EditProductScreenState extends State<EditProductScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Eliminar Producto'),
+        title: Text(
+          'Eliminar Producto',
+          style: TextStyle(color: Color(0xFF0F4C5C)),
+        ),
         content: const Text('¿Estás seguro de que quieres eliminar este producto? Esta acción no se puede deshacer.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            child: Text(
+              'Cancelar',
+              style: TextStyle(color: Color(0xFF64748B)),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
+            child: Text(
+              'Eliminar',
+              style: TextStyle(color: Color(0xFFE9965C)),
+            ),
           ),
         ],
       ),
@@ -171,19 +204,34 @@ class _EditProductScreenState extends State<EditProductScreen> {
 
   void _showErrorSnackbar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: const Color(0xFFE9965C), 
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
     );
   }
 
   void _showSuccessSnackbar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.green),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: const Color(0xFF3A9188), 
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
     );
   }
 
   void _showInfoSnackbar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.blue),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: const Color(0xFF0F4C5C),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
     );
   }
 
@@ -191,18 +239,29 @@ class _EditProductScreenState extends State<EditProductScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Editar Producto'),
+        title: const Text(
+          'Editar Producto',
+          style: TextStyle(
+            color: Color(0xFF202124),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 1,
+        iconTheme: const IconThemeData(color: Color(0xFF0F4C5C)),
+        foregroundColor: const Color(0xFF0F4C5C),
         actions: [
           if (!_isDeleting)
             TextButton(
               onPressed: _deleteProduct,
-              child: const Text(
+              child: Text(
                 'Eliminar',
-                style: TextStyle(color: Colors.red),
+                style: TextStyle(color: Color(0xFFE9965C)), 
               ),
             ),
         ],
       ),
+      backgroundColor: const Color(0xFFF4EDE4), 
       body: SafeArea(
         bottom: true,
         child: (_isLoading || _isDeleting)
@@ -251,8 +310,15 @@ class _EditProductScreenState extends State<EditProductScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF0F4C5C),
+          ),
+        ),
+        const SizedBox(height: 12),
         if (imagePaths.isNotEmpty)
           GridView.builder(
             shrinkWrap: true,
@@ -269,17 +335,23 @@ class _EditProductScreenState extends State<EditProductScreen> {
                 children: [
                   Container(
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey),
-                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFF3A9188)),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(12),
                       child: isNetworkImage
                           ? Image.network(
                               imagePaths[index],
                               width: double.infinity,
                               height: double.infinity,
                               fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  color: const Color(0xFFF4EDE4),
+                                  child: const Icon(Icons.error, color: Color(0xFF3A9188)),
+                                );
+                              },
                             )
                           : Image.file(
                               File(imagePaths[index]),
@@ -295,11 +367,16 @@ class _EditProductScreenState extends State<EditProductScreen> {
                     child: GestureDetector(
                       onTap: () => onRemove(index),
                       child: Container(
+                        padding: const EdgeInsets.all(4),
                         decoration: const BoxDecoration(
-                          color: Colors.red,
+                          color: Color(0xFFE9965C), 
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.close, color: Colors.white, size: 16),
+                        child: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                          size: 14,
+                        ),
                       ),
                     ),
                   ),
@@ -312,36 +389,60 @@ class _EditProductScreenState extends State<EditProductScreen> {
             width: double.infinity,
             height: 100,
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey),
-              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFF3A9188).withOpacity(0.3)),
+              borderRadius: BorderRadius.circular(12),
+              color: Colors.white,
             ),
-            child: const Column(
+            child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.photo_library, size: 40, color: Colors.grey),
-                SizedBox(height: 8),
-                Text('No hay imágenes'),
+                Icon(Icons.photo_library, size: 40, color: Color(0xFF3A9188)),
+                const SizedBox(height: 8),
+                Text(
+                  'No hay imágenes',
+                  style: TextStyle(color: Color(0xFF64748B)),
+                ),
               ],
             ),
           ),
         
         if (!isNetworkImage) ...[
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Row(
             children: [
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: _pickImages,
-                  icon: const Icon(Icons.photo_library),
-                  label: const Text('Galería'),
+                  icon: Icon(Icons.photo_library, color: Color(0xFF0F4C5C)),
+                  label: Text(
+                    'Galería',
+                    style: TextStyle(color: Color(0xFF0F4C5C)),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: Color(0xFF0F4C5C)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: _takePhoto,
-                  icon: const Icon(Icons.camera_alt),
-                  label: const Text('Cámara'),
+                  icon: Icon(Icons.camera_alt, color: Color(0xFF0F4C5C)),
+                  label: Text(
+                    'Cámara',
+                    style: TextStyle(color: Color(0xFF0F4C5C)),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: Color(0xFF0F4C5C)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
                 ),
               ),
             ],
@@ -356,9 +457,19 @@ class _EditProductScreenState extends State<EditProductScreen> {
       children: [
         TextFormField(
           controller: _nameController,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             labelText: 'Nombre del producto',
-            border: OutlineInputBorder(),
+            labelStyle: const TextStyle(color: Color(0xFF64748B)),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: const Color(0xFF3A9188).withOpacity(0.3)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFF0F4C5C), width: 2),
+            ),
+            filled: true,
+            fillColor: Colors.white,
           ),
           validator: (value) {
             if (value == null || value.isEmpty) {
@@ -368,12 +479,80 @@ class _EditProductScreenState extends State<EditProductScreen> {
           },
         ),
         const SizedBox(height: 16),
+        
+        // Selector de categoría
+        DropdownButtonFormField<String>(
+          value: _selectedCategory,
+          decoration: InputDecoration(
+            labelText: 'Categoría',
+            labelStyle: const TextStyle(color: Color(0xFF64748B)),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: const Color(0xFF3A9188).withOpacity(0.3)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFF0F4C5C), width: 2),
+            ),
+            filled: true,
+            fillColor: Colors.white,
+          ),
+          items: ProductCategories.allCategories
+              .where((cat) => cat != 'todos')
+              .map((category) {
+            return DropdownMenuItem(
+              value: category,
+              child: Row(
+                children: [
+                  Text(
+                    ProductCategories.getIcon(category),
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    _getCategoryDisplayName(category),
+                    style: const TextStyle(
+                      color: Color(0xFF202124),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+          onChanged: (value) {
+            setState(() {
+              _selectedCategory = value ?? 'otros';
+            });
+          },
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Por favor selecciona una categoría';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 16),
+
         TextFormField(
           controller: _priceController,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             labelText: 'Precio',
+            labelStyle: const TextStyle(color: Color(0xFF64748B)),
             prefixText: '\$ ',
-            border: OutlineInputBorder(),
+            prefixStyle: const TextStyle(
+              color: Color(0xFF0F4C5C),
+              fontWeight: FontWeight.w600,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: const Color(0xFF3A9188).withOpacity(0.3)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFF0F4C5C), width: 2),
+            ),
+            filled: true,
+            fillColor: Colors.white,
           ),
           keyboardType: TextInputType.number,
           validator: (value) {
@@ -390,10 +569,20 @@ class _EditProductScreenState extends State<EditProductScreen> {
         const SizedBox(height: 16),
         TextFormField(
           controller: _descriptionController,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             labelText: 'Descripción',
-            border: OutlineInputBorder(),
+            labelStyle: const TextStyle(color: Color(0xFF64748B)),
             alignLabelWithHint: true,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: const Color(0xFF3A9188).withOpacity(0.3)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFF0F4C5C), width: 2),
+            ),
+            filled: true,
+            fillColor: Colors.white,
           ),
           maxLines: 4,
           validator: (value) {
@@ -415,22 +604,53 @@ class _EditProductScreenState extends State<EditProductScreen> {
       children: [
         SizedBox(
           width: double.infinity,
-          height: 50,
+          height: 54,
           child: ElevatedButton(
             onPressed: _updateProduct,
-            child: const Text('Actualizar Producto', style: TextStyle(fontSize: 16)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF3A9188),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 2,
+            ),
+            child: const Text(
+              'Actualizar Producto',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
           ),
         ),
         const SizedBox(height: 16),
         SizedBox(
           width: double.infinity,
-          height: 50,
+          height: 54,
           child: OutlinedButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(color: Color(0xFF0F4C5C)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Text(
+              'Cancelar',
+              style: TextStyle(
+                color: Color(0xFF0F4C5C),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ),
       ],
     );
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _priceController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
   }
 }

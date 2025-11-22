@@ -7,6 +7,7 @@ const router = express.Router();
 
 //ruta publica
 router.get('/:id', userController.getUserProfile);
+router.get('/search/vendors', userController.searchVendors);
 
 //ruta Protegida
 router.get('/profile/me', authMiddleware, userController.getMyProfile);

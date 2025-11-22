@@ -3,11 +3,6 @@ const multer = require('multer');
 const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
-  console.log('🔍 MIDDLEWARE - Archivo recibido:');
-  console.log('   - Original Name:', file.originalname);
-  console.log('   - MIME Type:', file.mimetype);
-  console.log('   - Size:', file.size, 'bytes');
-  console.log('   - Field Name:', file.fieldname);
 
   // Detectar el tipo real por extensión
   const getMimeTypeFromExtension = (filename) => {
@@ -35,12 +30,12 @@ const fileFilter = (req, file, cb) => {
 
   // Usar el MIME type detectado por extensión
   if (allowedMimes.includes(actualMimeType)) {
-    console.log('Archivo aceptado (MIME type corregido)');
+   
     // Sobrescribir el MIME type incorrecto
     file.mimetype = actualMimeType;
     cb(null, true);
   } else {
-    console.log('Archivo rechazado - No es imagen válida');
+    
     cb(new Error(`Tipo de archivo no permitido: ${file.mimetype}. Solo se permiten imágenes: ${allowedMimes.join(', ')}`), false);
   }
 };

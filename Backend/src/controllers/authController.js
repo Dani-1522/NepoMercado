@@ -172,7 +172,7 @@ const authController = {
   }
 },
 
-  // ✅ NUEVO: Verificar código
+  // Verificar código
   async verifyRecoveryCode(req, res) {
     try {
       const { phone, code } = req.body;
@@ -210,7 +210,7 @@ const authController = {
     }
   },
 
-  // ✅ NUEVO: Resetear contraseña
+  // Resetear contraseña
   async resetPassword(req, res) {
     try {
       const { tempToken, newPassword } = req.body;

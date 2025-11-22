@@ -8,8 +8,7 @@ class WhatsAppService {
     
     // Validar que tenemos la configuración necesaria
     if (!this.accessToken || !this.phoneNumberId) {
-      console.warn('⚠️  WhatsApp Cloud API no configurado completamente');
-      console.warn('   Configura WHATSAPP_ACCESS_TOKEN y WHATSAPP_PHONE_NUMBER_ID en .env');
+    
     }
   }
 
@@ -22,7 +21,7 @@ class WhatsAppService {
 
       // Formatear número de teléfono
       const formattedPhone = this.formatPhoneNumber(phone);
-      console.log(`📤 Enviando WhatsApp a: ${formattedPhone}`);
+     
       
       const url = `${this.baseURL}/${this.phoneNumberId}/messages`;
       
@@ -45,27 +44,21 @@ class WhatsAppService {
         timeout: 10000 // 10 segundos timeout
       });
 
-      console.log(`✅ WhatsApp enviado exitosamente a ${formattedPhone}`);
-      console.log(`   Message ID: ${response.data?.messages?.[0]?.id}`);
       return true;
 
     } catch (error) {
-      console.error('❌ ERROR enviando WhatsApp:');
+      console.error('ERROR enviando WhatsApp:');
       
       if (error.response) {
-        // Error de la API de Facebook
-        console.error('   Status:', error.response.status);
-        console.error('   Data:', JSON.stringify(error.response.data, null, 2));
-        
+        // Error de la API de Facebook/WhatsApp
         const errorMessage = error.response.data?.error?.message || 'Error desconocido';
         throw new Error(`WhatsApp API Error: ${errorMessage}`);
       } else if (error.request) {
         // Error de red
-        console.error('   No se recibió respuesta del servidor');
+   
         throw new Error('Error de conexión con WhatsApp API');
       } else {
         // Error de configuración
-        console.error('   Error:', error.message);
         throw error;
       }
     }
@@ -79,7 +72,7 @@ class WhatsAppService {
       
       // Si no tiene código país, agregar +57 (colombia) por defecto
       if (!cleaned.startsWith('+')) {
-        // Asumir que es un número mexicano
+        // Asumir que es un número colombiano si tiene 10 dígitos
         if (cleaned.length === 10) {
           cleaned = '+57' + cleaned;
         } else {
@@ -133,11 +126,11 @@ class WhatsAppService {
         }
       });
 
-      console.log(`✅ Plantilla WhatsApp enviada a ${formattedPhone}`);
+   
       return true;
 
     } catch (error) {
-      console.error('❌ Error enviando plantilla WhatsApp:', error.response?.data || error.message);
+     
       throw error;
     }
   }
@@ -148,9 +141,7 @@ const whatsappService = new WhatsAppService();
 
 // Servicio de SMS (mantener por compatibilidad)
 const sendSMS = async (phone, message) => {
-  console.log('📱 SMS SIMULADO:');
-  console.log(`   Para: ${phone}`);
-  console.log(`   Mensaje: ${message}`);
+
   return true;
 };
 

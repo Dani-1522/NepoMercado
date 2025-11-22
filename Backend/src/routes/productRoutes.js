@@ -57,6 +57,11 @@ router.get(
 );
 
 router.get(
+  '/categories/all',
+  productController.getCategories
+);
+
+router.get(
   '/user/liked',
   authMiddleware,
   productController.getLikedProducts
@@ -66,6 +71,10 @@ router.get(
   '/user/my-products', 
   authMiddleware, 
   productController.getUserProducts
+);
+router.get(
+  '/user/:userId', 
+  productController.getProductsByUser
 );
 
 module.exports = router;

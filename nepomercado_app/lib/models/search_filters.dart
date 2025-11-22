@@ -43,11 +43,17 @@ class SearchFilters {
 
   Map<String, dynamic> toQueryParams() {
     final params = <String, dynamic>{
-      'page': page.toString(),
-      'limit': limit.toString(),
+     'query': query,
       'sortBy': sortBy,
       'sortOrder': sortOrder,
+      'page': page.toString(),
+      'limit': limit.toString(),
     };
+
+    // Solo agregar categoría si no es "todos"
+    if (category != 'todos') {
+      params['category'] = category;
+    }
 
     if (query.isNotEmpty) params['query'] = query;
     if (category != 'all') params['category'] = category;

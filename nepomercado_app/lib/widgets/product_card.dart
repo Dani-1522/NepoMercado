@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/product.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
+import '../screens/profile/vendor_profile_screen.dart'; // 🔥 IMPORTAR PANTALLA DE PERFIL
 
 class ProductCard extends StatefulWidget {
   final Product product;
@@ -27,6 +28,25 @@ class ProductCard extends StatefulWidget {
 
 class _ProductCardState extends State<ProductCard> {
   bool _isLiking = false;
+
+  // 🔥 NUEVO: Navegar al perfil del vendedor
+  void _navigateToVendorProfile() {
+    if (widget.product.userId.isNotEmpty) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => VendorProfileScreen(userId: widget.product.userId),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se puede acceder al perfil del vendedor'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 
   String _formatPrice(double price) {
     final intPrice = price.toInt();
@@ -79,37 +99,52 @@ class _ProductCardState extends State<ProductCard> {
     }
   }
 
-  void _showLoginDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Registro Requerido'),
-        content: const Text('Debes registrarte para dar "me encanta" a los productos.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, '/register');
-            },
-            child: const Text('Registrarse'),
-          ),
-        ],
+void _showLoginDialog() {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(
+        'Registro Requerido',
+        style: TextStyle(color: Color(0xFF0F4C5C)),
       ),
-    );
-  }
-
+      content: Text('Debes registrarte para dar "me encanta" a los productos.'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(
+            'Cancelar',
+            style: TextStyle(color: Color(0xFF64748B)),
+          ),
+        ),
+        TextButton(
+          onPressed: () {
+            Navigator.pop(context);
+            Navigator.pushNamed(context, '/register');
+          },
+          child: Text(
+            'Registrarse',
+            style: TextStyle(color: Color(0xFF0F4C5C)),
+          ),
+        ),
+      ],
+    ),
+  );
+}
   @override
   Widget build(BuildContext context) {
     final authService = Provider.of<AuthService>(context);
     final isLoggedIn = authService.currentUser != null;
 
     return Card(
-      elevation: 2,
+      elevation: 1,
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      shape: RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(12), 
+    side: BorderSide(
+      color: Color(0xFF3A9188).withOpacity(0.1), 
+      width: 1,
+    ),
+  ),
       child: InkWell(
         onTap: widget.onTap,
         onLongPress: widget.onLongPress,
@@ -131,20 +166,28 @@ class _ProductCardState extends State<ProductCard> {
                     width: double.infinity,
                     height: 150,
                     fit: BoxFit.cover,
-                    placeholder: (context, url) => Container(
-                      height: 150,
-                      color: Colors.grey[300],
-                      child: const Center(child: CircularProgressIndicator()),
+                   placeholder: (context, url) => Container(
+                    height: 150,
+                    color: Color(0xFFF4EDE4), 
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF0F4C5C), 
+                      ),
                     ),
+                  ),
                     errorWidget: (context, url, error) => Container(
                       height: 150,
-                      color: Colors.grey[300],
-                      child: const Icon(Icons.error),
+                      color: Color(0xFFF4EDE4), 
+                      child: Icon(
+                        Icons.error_outline,
+                        color: Color(0xFF3A9188), 
+                        size: 40,
+                      ),
                     ),
                   ),
                 ),
                 
-                // Indicador de múltiples imágenes
+              
                 if (widget.product.imageUrls.length > 1)
                   Positioned(
                     top: 8,
@@ -152,7 +195,7 @@ class _ProductCardState extends State<ProductCard> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.black54,
+                        color: Color(0xFF0F4C5C).withOpacity(0.8),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -166,108 +209,158 @@ class _ProductCardState extends State<ProductCard> {
                     ),
                   ),
                 
-                // Botón de like
-               
-                // En el Stack de _buildProductImage, verifica el botón de like:
-                    // En lib/widgets/product_card.dart - reemplaza el botón de like:
-                    if (widget.showLikeButton)
-  Positioned(
-    top: 8,
-    left: 8,
-    child: GestureDetector(
-      onTap: widget.onLike ?? _toggleLike,
-      child: Material(
-        color: Colors.transparent,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: widget.product.isLiked
-                ? Colors.red.withOpacity(0.9)
-                : Colors.white.withOpacity(0.9),
-            shape: BoxShape.circle,
-          ),
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            child: Icon(
-              widget.product.isLiked 
-                ? Icons.favorite 
-                : Icons.favorite_border,
-              color: widget.product.isLiked ? Colors.white : Colors.grey,
-              size: 20,
-              key: ValueKey<bool>(widget.product.isLiked),
-            ),
-          ),
-        ),
-      ),
-    ),
-  ),
+                
+                if (widget.showLikeButton)
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: GestureDetector(
+                      onTap: widget.onLike ?? _toggleLike,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: widget.product.isLiked
+                                ? Color(0xFFE9965C).withOpacity(0.9)
+                                : Colors.white.withOpacity(0.9),
+                            shape: BoxShape.circle,
+                          ),
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 300),
+                            child: Icon(
+                              widget.product.isLiked 
+                                ? Icons.favorite 
+                                : Icons.favorite_border,
+                              color: widget.product.isLiked ? Colors.white :  Color(0xFF3A9188),
+                              size: 20,
+                              key: ValueKey<bool>(widget.product.isLiked),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
 
             // Información del producto
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.product.name,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    widget.product.description,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                         _formatPrice(widget.product.price),
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green,
-                        ),
-                      ),
-                      Row(
+            Container(
+  padding: const EdgeInsets.all(12),
+  decoration: BoxDecoration(
+    color: Colors.white,
+    borderRadius: const BorderRadius.only(
+      bottomLeft: Radius.circular(12),
+      bottomRight: Radius.circular(12),
+    ),
+  ),
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        widget.product.name,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          color: Color(0xFF202124), 
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      const SizedBox(height: 4),
+      Text(
+        widget.product.description,
+        style: TextStyle(
+          fontSize: 14,
+          color: Color(0xFF64748B),
+          height: 1.4,
+        ),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      ),
+      const SizedBox(height: 8),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            _formatPrice(widget.product.price),
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF0F4C5C), 
+            ),
+          ),
+          Row(
+            children: [
+              Icon(
+                Icons.favorite,
+                color: Color(0xFFE9965C), 
+                size: 16,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                widget.product.likeCount.toString(),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF64748B), 
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+                  // Nombre del vendedor clickeable
+                  if (widget.product.artisanName != null) ...[
+                    const SizedBox(height: 4),
+                    GestureDetector(
+                      onTap: _navigateToVendorProfile,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            Icons.favorite,
-                            color: Colors.grey[400],
-                            size: 16,
-                          ),
-                          const SizedBox(width: 4),
                           Text(
-                            widget.product.likeCount.toString(),
+                            'Por: ',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey[600],
+                             color: Color(0xFF64748B),
                             ),
+                          ),
+                          Text(
+                            widget.product.artisanName!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF0F4C5C), 
+                              fontWeight: FontWeight.w500,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.open_in_new,
+                            size: 10,
+                            color: Color(0xFF0F4C5C),
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                  if (widget.product.artisanName != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      'Por: ${widget.product.artisanName!}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
+                    ),
+                  ],
+                  // Mostrar categoría del producto
+                  if (widget.product.category != null && widget.product.category != 'otros') ...[
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: _getCategoryColor(widget.product.category!),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        _getCategoryDisplayName(widget.product.category!),
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   ],
@@ -278,5 +371,43 @@ class _ProductCardState extends State<ProductCard> {
         ),
       ),
     );
+  }
+
+  // Colores de categorías con nueva paleta
+Color _getCategoryColor(String category) {
+  final colors = {
+    'comida': Color(0xFFE9965C), // Coral
+    'ropa': Color(0xFF3A9188),   // Verde azulado
+    'artesanias': Color(0xFF0F4C5C), // Azul verde oscuro
+    'electronica': Color(0xFF64748B), // Gris
+    'hogar': Color(0xFF3A9188), // Verde azulado
+    'deportes': Color(0xFFE9965C), // Coral
+    'libros': Color(0xFF0F4C5C), // Azul verde oscuro
+    'joyeria': Color(0xFFE9965C), // Coral
+    'salud': Color(0xFF3A9188), // Verde azulado
+    'belleza': Color(0xFF0F4C5C), // Azul verde oscuro
+    'juguetes': Color(0xFFE9965C), // Coral
+    'mascotas': Color(0xFF3A9188), // Verde azulado
+  };
+  return colors[category] ?? Color(0xFF64748B); 
+}
+  // Método para obtener nombre display de categoría
+  String _getCategoryDisplayName(String category) {
+    final names = {
+      'comida': 'Comida',
+      'ropa': 'Ropa',
+      'artesanias': 'Artesanías',
+      'electronica': 'Electrónica',
+      'hogar': 'Hogar',
+      'deportes': 'Deportes',
+      'libros': 'Libros',
+      'joyeria': 'Joyería',
+      'salud': 'Salud',
+      'belleza': 'Belleza',
+      'juguetes': 'Juguetes',
+      'mascotas': 'Mascotas',
+      'otros': 'Otros',
+    };
+    return names[category] ?? category;
   }
 }

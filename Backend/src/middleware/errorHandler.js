@@ -1,5 +1,5 @@
 const errorHandler = (err, req, res, next) => {
-  console.error('🔥 Error:', err);
+  console.error('Error:', err);
 
   // Error de validación de Mongoose
   if (err.name === 'ValidationError') {

@@ -5,16 +5,16 @@ const productController = {
   async createProduct(req, res) {
   try {
   
-    const { name, price, description } = req.body;
+    const { name, price, description, category } = req.body;
     // Validar campos requeridos
-      if (!name || !price || !description) {
+      if (!name || !price || !description || !category) {
         return res.status(400).json({
           success: false,
           message: 'Todos los campos son requeridos: nombre, precio, descripción'
         });
       }
 
-      // ✅ CAMBIADO: Validar múltiples archivos
+      //  Validar múltiples archivos
       if (!req.files || req.files.length === 0) {
         return res.status(400).json({
           success: false,
@@ -22,8 +22,7 @@ const productController = {
         });
       }
 
-      // ✅ NUEVO: Subir múltiples imágenes a Cloudinary
-      console.log('☁️ Subiendo', req.files.length, 'imágenes a Cloudinary...');
+      // Subir múltiples imágenes a Cloudinary
       const uploadPromises = req.files.map(file => 
         CloudinaryService.uploadImage(file.buffer)
       );
@@ -31,7 +30,7 @@ const productController = {
       const uploadResults = await Promise.all(uploadPromises);
       const imageUrls = uploadResults.map(result => result.secure_url);
 
-      console.log('✅ Imágenes subidas:', imageUrls);
+   
 
     
     const product = new Product({
@@ -39,6 +38,7 @@ const productController = {
       name: name.trim(),
       price: parseFloat(price),
       description: description.trim(),
+      category: category,
       imageUrls
     });
 
@@ -53,7 +53,7 @@ const productController = {
     });
 
   } catch (error) {
-    console.error('❌ Error creando producto:', error);
+    console.error(' Error creando producto:', error);
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor'
@@ -63,7 +63,7 @@ const productController = {
 
   async updateProduct(req, res) {
     try {
-      const { name, price, description } = req.body;
+      const { name, price, description, category } = req.body;
       const productId = req.params.id;
 
       const product = await Product.findById(productId);
@@ -87,10 +87,11 @@ const productController = {
       if (name) product.name = name.trim();
       if (price) product.price = parseFloat(price);
       if (description) product.description = description.trim();
+      if (category) product.category = category;
 
       // Manejar nuevas imágenes si se enviaron
       if (req.files && req.files.length > 0) {
-        console.log('🖼️ Actualizando imágenes del producto...');
+        console.log(' Actualizando imágenes del producto...');
         
         // Subir nuevas imágenes a Cloudinary
         const uploadPromises = req.files.map(file => 
@@ -122,7 +123,44 @@ const productController = {
     }
   },
 
-  // ✅ NUEVO: Eliminar producto
+  //  NUEVO: Obtener productos por usuario con paginación
+async getProductsByUser(req, res) {
+  try {
+    const userId = req.params.userId;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const products = await Product.find({ userId })
+      .populate('userId', 'name phone profileImage')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Product.countDocuments({ userId });
+
+    res.json({
+      success: true,
+      data: {
+        products,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit)
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Error obteniendo productos del usuario:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor'
+    });
+  }
+},
+  // NUEVO: Eliminar producto
   async deleteProduct(req, res) {
     try {
       const productId = req.params.id;
@@ -144,8 +182,7 @@ const productController = {
         });
       }
 
-      // TODO: Opcional - Eliminar imágenes de Cloudinary
-      // await CloudinaryService.deleteImages(product.imageUrls);
+    
 
       await Product.findByIdAndDelete(productId);
 
@@ -163,7 +200,7 @@ const productController = {
     }
   },
 
-  // ✅ NUEVO: Búsqueda y filtros de productos
+  // Búsqueda y filtros de productos
 async searchProducts(req, res) {
   try {
     const {
@@ -189,8 +226,8 @@ async searchProducts(req, res) {
     }
 
     // Filtro por categoría (para futura implementación)
-    if (category && category !== 'all') {
-      // filter.category = category; // Cuando implementes categorías
+    if (category && category !== 'todos' && category !== 'all') {
+      filter.category = category;
     }
 
     // Filtro por precio
@@ -207,8 +244,8 @@ async searchProducts(req, res) {
     // Calcular paginación
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    console.log('🔍 Filtros de búsqueda:', filter);
-    console.log('📊 Opciones de ordenamiento:', sortOptions);
+    console.log('Filtros de búsqueda:', filter);
+    console.log('Opciones de ordenamiento:', sortOptions);
 
     // Ejecutar consulta
     const products = await Product.find(filter)
@@ -218,6 +255,12 @@ async searchProducts(req, res) {
       .limit(parseInt(limit));
 
     const total = await Product.countDocuments(filter);
+
+    const categoryStats = await Product.aggregate([
+      { $match: filter },
+      { $group: { _id: '$category', count: { $sum: 1 } } }
+    ]);
+
 
     // Obtener estadísticas para los filtros
     const priceStats = await Product.aggregate([
@@ -247,13 +290,68 @@ async searchProducts(req, res) {
             min: priceStats[0].minPrice,
             max: priceStats[0].maxPrice,
             avg: priceStats[0].avgPrice
-          } : { min: 0, max: 0, avg: 0 }
+          } : { min: 0, max: 0, avg: 0 },
+          categories: categoryStats
         }
       }
     });
 
   } catch (error) {
     console.error('Error en búsqueda de productos:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor'
+    });
+  }
+},
+
+  //  Endpoint para obtener todas las categorías disponibles
+async getCategories(req, res) {
+  try {
+    const categories = [
+      'comida',
+      'ropa', 
+      'artesanias',
+      'electronica',
+      'hogar',
+      'deportes',
+      'libros',
+      'joyeria',
+      'salud',
+      'belleza',
+      'juguetes',
+      'mascotas',
+      'otros'
+    ];
+
+    // Obtener conteo de productos por categoría
+    const categoryCounts = await Product.aggregate([
+      {
+        $group: {
+          _id: '$category',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Combinar categorías con sus conteos
+    const categoriesWithCounts = categories.map(cat => {
+      const countData = categoryCounts.find(item => item._id === cat);
+      return {
+        name: cat,
+        count: countData ? countData.count : 0
+      };
+    });
+
+    res.json({
+      success: true,
+      data: {
+        categories: categoriesWithCounts
+      }
+    });
+
+  } catch (error) {
+    console.error('Error obteniendo categorías:', error);
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor'

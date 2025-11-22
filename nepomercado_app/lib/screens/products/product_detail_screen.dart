@@ -1,4 +1,4 @@
-// screens/products/product_detail_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
 import '../../models/product.dart';
+import '../profile/vendor_profile_screen.dart';
 import 'image_viewer_screen.dart'; 
 
 class ProductDetailScreen extends StatefulWidget {
@@ -31,6 +32,26 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     _product = widget.product;
   }
 
+  void _navigateToVendorProfile() {
+    if (_product.userId.isNotEmpty) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => VendorProfileScreen(userId: _product.userId),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('No se puede acceder al perfil del vendedor'),
+          backgroundColor: const Color(0xFFE9965C), 
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      );
+    }
+  }
+
   Future<void> _toggleLike() async {
     if (_isLiking) return;
     
@@ -46,6 +67,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           price: _product.price,
           description: _product.description,
           imageUrls: _product.imageUrls,
+          category: _product.category,
           userId: _product.userId,
           artisanName: _product.artisanName,
           artisanPhone: _product.artisanPhone,
@@ -60,32 +82,51 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     setState(() => _isLiking = false);
   }
 
-  Future<void> _launchWhatsApp() async {
-    if (_product.artisanPhone == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Número de contacto no disponible'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    final phone = _product.artisanPhone!.replaceAll(RegExp(r'[^\d+]'), '');
-    final url = 'https://wa.me/$phone?text=Hola! Me interesa tu producto: ${_product.name}';
-
-    if (await canLaunchUrl(Uri.parse(url))) {
-      await launchUrl(Uri.parse(url));
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No se pudo abrir WhatsApp'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+Future<void> _launchWhatsApp() async {
+  if (_product.artisanPhone == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Número de contacto no disponible'),
+        backgroundColor: const Color(0xFFE9965C),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
+    return;
   }
 
+  final phone = _product.artisanPhone!.replaceAll(RegExp(r'[^\d+]'), '');
+  
+  final message = '''
+🛍️ *SOLICITUD DE PRODUCTO NepoMercado* 🛍️
+
+¡Hola! Vi tu producto en la app y me interesa mucho:
+
+*📦 Producto:* ${_product.name}
+*💰 Precio:* \$${_product.price.toStringAsFixed(2)}
+*📋 Categoría:* ${_getCategoryDisplayName(_product.category ?? 'otros')}
+
+
+¿Podrías darme más información sobre este producto y cómo puedo adquirirlo?
+
+¡Gracias! 😊''';
+
+  final encodedMessage = Uri.encodeComponent(message);
+  final url = 'https://wa.me/+57$phone?text=$encodedMessage';
+
+  if (await canLaunchUrl(Uri.parse(url))) {
+    await launchUrl(Uri.parse(url));
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('No se pudo abrir WhatsApp'),
+        backgroundColor: const Color(0xFFE9965C),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
+  }
+}
   @override
   Widget build(BuildContext context) {
     final authService = Provider.of<AuthService>(context);
@@ -93,23 +134,37 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_product.name),
+        title: Text(
+          _product.name,
+          style: const TextStyle(
+            color: Color(0xFF202124),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 1,
+        iconTheme: const IconThemeData(color: Color(0xFF0F4C5C)),
+        foregroundColor: const Color(0xFF0F4C5C),
         actions: [
           if (isLoggedIn)
             IconButton(
               icon: _isLiking
-                  ? const CircularProgressIndicator()
+                  ? const CircularProgressIndicator(
+                      color: Color(0xFF0F4C5C), 
+                    )
                   : Icon(
                       _product.isLiked ? Icons.favorite : Icons.favorite_border,
-                      color: _product.isLiked ? Colors.red : null,
+                      color: _product.isLiked 
+                          ? const Color(0xFFE9965C) 
+                          : const Color(0xFF3A9188),
                     ),
               onPressed: _toggleLike,
             ),
         ],
       ),
+      backgroundColor: const Color(0xFFF4EDE4), 
       body: Column(
         children: [
-          // 🔥 CAMBIO: Expanded para que el contenido sea scrollable
           Expanded(
             child: SingleChildScrollView(
               child: Column(
@@ -119,87 +174,169 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   _buildImageCarousel(),
                   
                   // Información del producto
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
+                  Container(
+                    margin: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           _product.name,
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0F4C5C), 
+                          ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 12),
                         Text(
                           '\$${_product.price.toStringAsFixed(2)}',
-                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                color: Colors.green,
-                                fontWeight: FontWeight.bold,
-                              ),
+                          style: const TextStyle(
+                            fontSize: 28,
+                            color: Color(0xFF0F4C5C), 
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         const SizedBox(height: 16),
                         
                         // Información de likes
                         if (_product.likeCount > 0)
-                          Row(
-                            children: [
-                              const Icon(Icons.favorite, color: Colors.red, size: 16),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${_product.likeCount} ${_product.likeCount == 1 ? ' persona le ha dado me encanta' : ' personas le han dado me encanta'}',
-                                style: Theme.of(context).textTheme.bodyMedium,
-                              ),
-                            ],
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE9965C).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.favorite, color: Color(0xFFE9965C), size: 16),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '${_product.likeCount} ${_product.likeCount == 1 ? 'persona le ha dado me encanta' : 'personas le han dado me encanta'}',
+                                  style: const TextStyle(
+                                    color: Color(0xFF0F4C5C),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         
-                        const SizedBox(height: 16),
-                        Text(
-                          'Descripción:',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                        const SizedBox(height: 20),
+                        const Text(
+                          'Descripción',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF0F4C5C),
+                          ),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           _product.description,
-                          style: Theme.of(context).textTheme.bodyLarge,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Color(0xFF202124),
+                            height: 1.4,
+                          ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 20),
 
-                        
-                        if (_product.artisanName != null) ...[
-                          const Divider(),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Vendedor:',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
+                        // Categoría del producto
+                        if (_product.category != null && _product.category != 'otros')
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF3A9188).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFF3A9188).withOpacity(0.3)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.category, size: 16, color: Color(0xFF3A9188)),
+                                const SizedBox(width: 6),
+                                Text(
+                                  _getCategoryDisplayName(_product.category!),
+                                  style: const TextStyle(
+                                    color: Color(0xFF0F4C5C),
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
+                              ],
+                            ),
+                          ),
+                        
+                        const SizedBox(height: 24),
+
+                        // Información del vendedor
+                        if (_product.artisanName != null) ...[
+                          const Divider(
+                            color: Color(0xFF3A9188),
+                            height: 1,
+                          ),
+                          const SizedBox(height: 20),
+                          const Text(
+                            'Vendedor',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF0F4C5C),
+                            ),
                           ),
                           const SizedBox(height: 12),
                           
                           // Tarjeta del vendedor con foto de perfil
                           _buildArtisanCard(),
-                          
-                          // 🔥 NUEVO: Espacio extra al final para que no quede tapado por el botón
-                          const SizedBox(height: 80),
                         ],
                       ],
                     ),
                   ),
+                  const SizedBox(height: 100),
                 ],
               ),
             ),
           ),
         ],
       ),
-      // 🔥 CAMBIO: Botón fijo en la parte inferior
+      
       bottomNavigationBar: _buildWhatsAppButton(),
     );
   }
 
-  // 🔥 NUEVO: Botón de WhatsApp en la parte inferior
+  // Método para obtener nombre display de categoría
+  String _getCategoryDisplayName(String category) {
+    final names = {
+      'comida': 'Comida',
+      'ropa': 'Ropa',
+      'artesanias': 'Artesanías',
+      'electronica': 'Electrónica',
+      'hogar': 'Hogar',
+      'deportes': 'Deportes',
+      'libros': 'Libros',
+      'joyeria': 'Joyería',
+      'salud': 'Salud',
+      'belleza': 'Belleza',
+      'juguetes': 'Juguetes',
+      'mascotas': 'Mascotas',
+      'otros': 'Otros',
+    };
+    return names[category] ?? category;
+  }
+
+  // Botón de WhatsApp en la parte inferior
   Widget _buildWhatsAppButton() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -207,9 +344,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black12,
+            color: Colors.black.withOpacity(0.1),
             blurRadius: 8,
-            offset: Offset(0, -2),
+            offset: const Offset(0, -2),
           ),
         ],
       ),
@@ -228,11 +365,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               ),
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
+              backgroundColor: const Color(0xFF3A9188), 
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
+              elevation: 2,
             ),
           ),
         ),
@@ -245,106 +383,116 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Row(
-          children: [
-            // Foto de perfil del vendedor
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.grey.shade300, width: 2),
+        child: InkWell(
+          onTap: _navigateToVendorProfile,
+          borderRadius: BorderRadius.circular(16),
+          child: Row(
+            children: [
+              // Foto de perfil del vendedor
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFF3A9188), width: 2),
+                ),
+                child: ClipOval(
+                  child: _product.artisanProfileImage != null && _product.artisanProfileImage!.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: _product.artisanProfileImage!,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => _buildPlaceholderAvatar(),
+                          errorWidget: (context, url, error) => _buildPlaceholderAvatar(),
+                        )
+                      : _buildPlaceholderAvatar(),
+                ),
               ),
-              child: ClipOval(
-                child: _product.hasArtisanProfileImage
-                    ? CachedNetworkImage(
-                        imageUrl: _product.artisanProfileImage!,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Container(
-                          color: Colors.grey[200],
-                          child: const Center(
-                            child: CircularProgressIndicator(),
-                          ),
-                        ),
-                        errorWidget: (context, url, error) => Container(
-                          color: Colors.grey[200],
-                          child: const Icon(
-                            Icons.person,
-                            color: Colors.grey,
-                            size: 30,
-                          ),
-                        ),
-                      )
-                    : Container(
-                        color: Colors.grey[200],
-                        child: const Icon(
-                          Icons.person,
-                          color: Colors.grey,
-                          size: 30,
-                        ),
-                      ),
-              ),
-            ),
-            const SizedBox(width: 16),
-            
-            // Información del vendedor
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _product.artisanName!,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  if (_product.artisanPhone != null)
+              const SizedBox(width: 16),
+              
+              // Información del vendedor
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Row(
                       children: [
-                        const Icon(
-                          Icons.phone,
-                          size: 16,
-                          color: Colors.grey,
+                        Expanded(
+                          child: Text(
+                            _product.artisanName!,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0F4C5C),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          _product.artisanPhone!,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Colors.grey[700],
-                              ),
+                        const Icon(
+                          Icons.arrow_forward_ios,
+                          size: 16,
+                          color: Color(0xFF3A9188),
                         ),
                       ],
                     ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.verified,
-                        size: 16,
-                        color: Colors.green,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Vendedor verificado',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.green,
-                              fontWeight: FontWeight.w500,
+                    const SizedBox(height: 6),
+                    if (_product.artisanPhone != null)
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.phone,
+                            size: 16,
+                            color: Color(0xFF3A9188),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            _product.artisanPhone!,
+                            style: const TextStyle(
+                              color: Color(0xFF64748B),
                             ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ],
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.verified,
+                          size: 16,
+                          color: Color(0xFF3A9188),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Ver perfil del vendedor',
+                          style: TextStyle(
+                            color: Color(0xFF0F4C5C),
+                            fontWeight: FontWeight.w500,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildPlaceholderAvatar() {
+    return Container(
+      color: const Color(0xFFF4EDE4),
+      child: const Icon(
+        Icons.person,
+        color: Color(0xFF3A9188),
+        size: 30,
       ),
     );
   }
@@ -354,14 +502,19 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     if (_product.imageUrls.isEmpty) {
       return Container(
         height: 300,
-        color: Colors.grey[200],
-        child: const Center(
+        color: const Color(0xFFF4EDE4),
+        child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.image, size: 50, color: Colors.grey),
-              SizedBox(height: 8),
-              Text('No hay imágenes disponibles'),
+              Icon(Icons.image, size: 50, color: Color(0xFF3A9188)),
+              const SizedBox(height: 12),
+              Text(
+                'No hay imágenes disponibles',
+                style: TextStyle(
+                  color: Color(0xFF64748B),
+                ),
+              ),
             ],
           ),
         ),
@@ -393,17 +546,24 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   width: double.infinity,
                   fit: BoxFit.cover,
                   placeholder: (context, url) => Container(
-                    color: Colors.grey[300],
-                    child: const Center(child: CircularProgressIndicator()),
+                    color: const Color(0xFFF4EDE4),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF0F4C5C),
+                      ),
+                    ),
                   ),
                   errorWidget: (context, url, error) => Container(
-                    color: Colors.grey[300],
-                    child: const Column(
+                    color: const Color(0xFFF4EDE4),
+                    child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.error, size: 50, color: Colors.grey),
-                        SizedBox(height: 8),
-                        Text('Error al cargar imagen'),
+                        Icon(Icons.error, size: 50, color: Color(0xFF3A9188)),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Error al cargar imagen',
+                          style: TextStyle(color: Color(0xFF64748B)),
+                        ),
                       ],
                     ),
                   ),
@@ -419,7 +579,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.black54,
+                    color: const Color(0xFF0F4C5C).withOpacity(0.8),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
@@ -427,7 +587,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 12,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),

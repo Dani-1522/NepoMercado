@@ -3,6 +3,7 @@ const CloudinaryService = require('../services/cloudinaryService');
 const bcrypt = require('bcryptjs');
 
 const userController = {
+  // Obtener perfil de usuario por ID
   async getUserProfile(req, res) {
     try {
       const user = await User.findById(req.params.id)
@@ -28,7 +29,7 @@ const userController = {
       });
     }
   },
-
+  // Obtener perfil propio
   async getMyProfile(req, res) {
     try {
       const user = await User.findById(req.user._id)
@@ -47,7 +48,7 @@ const userController = {
       });
     }
   },
-
+  // Actualizar perfil de usuario
   async updateProfile(req, res) {
     try {
       const { name, phone } = req.body;
@@ -95,7 +96,7 @@ const userController = {
     }
   },
 
-  // 🔥 NUEVO: Cambiar contraseña
+  //  Cambiar contraseña
   async changePassword(req, res) {
     try {
       const { currentPassword, newPassword } = req.body;
@@ -143,8 +144,38 @@ const userController = {
       });
     }
   },
+  //Buscar vendedores por nombre
+  async searchVendors(req, res) {
+    try {
+      const { query } = req.query;
 
-  // 🔥 NUEVO: Subir/actualizar foto de perfil
+      if (!query || query.trim() === '') {
+        return res.status(400).json({
+          success: false,
+          message: 'Query de búsqueda requerido'
+        });
+      }
+
+      const users = await User.find({
+        name: { $regex: query.trim(), $options: 'i' }
+      }).select('-passwordHash -recoveryCode -recoveryCodeExpires')
+        .limit(10);
+
+      res.json({
+        success: true,
+        data: { users }
+      });
+
+    } catch (error) {
+      console.error('Error buscando vendedores:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error interno del servidor'
+      });
+    }
+  },
+
+  //Subir/actualizar foto de perfil
   async updateProfileImage(req, res) {
     try {
       const userId = req.user._id;
@@ -164,7 +195,7 @@ const userController = {
           const publicId = user.profileImage.split('/').pop().split('.')[0];
           await CloudinaryService.deleteImage(`artesanos/${publicId}`);
         } catch (deleteError) {
-          console.warn('⚠️ No se pudo eliminar la imagen anterior:', deleteError.message);
+          console.warn('No se pudo eliminar la imagen anterior:', deleteError.message);
         }
       }
 
@@ -195,7 +226,7 @@ const userController = {
     }
   },
 
-  // 🔥 NUEVO: Eliminar foto de perfil
+  //Eliminar foto de perfil
   async deleteProfileImage(req, res) {
     try {
       const userId = req.user._id;
@@ -213,7 +244,7 @@ const userController = {
         const publicId = user.profileImage.split('/').pop().split('.')[0];
         await CloudinaryService.deleteImage(`artesanos/${publicId}`);
       } catch (deleteError) {
-        console.warn('⚠️ No se pudo eliminar la imagen de Cloudinary:', deleteError.message);
+        console.warn('No se pudo eliminar la imagen de Cloudinary:', deleteError.message);
       }
 
       // Eliminar referencia en la base de datos

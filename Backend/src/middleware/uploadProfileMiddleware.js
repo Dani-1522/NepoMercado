@@ -4,9 +4,7 @@ const multer = require('multer');
 const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
-  console.log('🖼️ MIDDLEWARE PERFIL - Archivo recibido:');
-  console.log('   - Original Name:', file.originalname);
-  console.log('   - MIME Type:', file.mimetype);
+ 
 
   const getMimeTypeFromExtension = (filename) => {
     const ext = filename.toLowerCase().split('.').pop();

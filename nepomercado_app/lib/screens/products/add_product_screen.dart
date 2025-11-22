@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/loading_indicator.dart';
+import '../../config/categories.dart'; 
 
 class AddProductScreen extends StatefulWidget {
   const AddProductScreen({Key? key}) : super(key: key);
@@ -23,6 +24,28 @@ class _AddProductScreenState extends State<AddProductScreen> {
   List<File> _selectedImages = [];
   bool _isLoading = false;
   final ImagePicker _picker = ImagePicker();
+  String _selectedCategory = 'otros'; 
+
+  //Método para obtener nombre display de categoría
+  String _getCategoryDisplayName(String category) {
+    final names = {
+      'todos': 'Todos',
+      'comida': 'Comida',
+      'ropa': 'Ropa',
+      'artesanias': 'Artesanías',
+      'electronica': 'Electrónica',
+      'hogar': 'Hogar',
+      'deportes': 'Deportes',
+      'libros': 'Libros',
+      'joyeria': 'Joyería',
+      'salud': 'Salud',
+      'belleza': 'Belleza',
+      'juguetes': 'Juguetes',
+      'mascotas': 'Mascotas',
+      'otros': 'Otros',
+    };
+    return names[category] ?? category;
+  }
 
   Future<void> _pickImages() async {
     try {
@@ -86,12 +109,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // ✅ CORREGIDO: Cambiar 'image' por 'images'
       final response = await _apiService.createProduct(
         name: _nameController.text.trim(),
         price: double.parse(_priceController.text),
         description: _descriptionController.text.trim(),
-        images: _selectedImages, // ✅ CORREGIDO: 'images' en plural
+        category: _selectedCategory, 
+        images: _selectedImages,
       );
 
       setState(() => _isLoading = false);
@@ -112,7 +135,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.red,
+        backgroundColor: const Color(0xFFE9965C), 
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
@@ -121,7 +146,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.green,
+        backgroundColor: const Color(0xFF3A9188), 
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
@@ -130,22 +157,25 @@ class _AddProductScreenState extends State<AddProductScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.blue,
+        backgroundColor: const Color(0xFF0F4C5C), 
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
 
   void _clearForm() {
     _formKey.currentState?.reset();
-    setState(() => _selectedImages.clear());
+    setState(() {
+      _selectedImages.clear();
+      _selectedCategory = 'otros'; 
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final authService = Provider.of<AuthService>(context);
 
-    // ✅ MEJORA: Verificar si el usuario está logueado
-    // Si no está logueado, mostrar diálogo de registro
     void _checkAuthAndSubmit() async {
       if (authService.currentUser == null) {
         _showAuthRequiredDialog();
@@ -156,136 +186,240 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Agregar Producto'),
+        title: const Text(
+          'Agregar Producto',
+          style: TextStyle(
+            color: Color(0xFF202124),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 1,
+        iconTheme: const IconThemeData(color: Color(0xFF0F4C5C)),
+        foregroundColor: const Color(0xFF0F4C5C),
         actions: [
           IconButton(
-            icon: const Icon(Icons.clear),
+            icon: const Icon(Icons.clear, color: Color(0xFF0F4C5C)),
             onPressed: _clearForm,
           ),
         ],
       ),
+      backgroundColor: const Color(0xFFF4EDE4), 
       body: _isLoading
           ? const LoadingIndicator(message: 'Creando producto...')
-          : Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Form(
-                key: _formKey,
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      // Selector de múltiples imágenes
-                      _buildImageSelector(),
-                      const SizedBox(height: 24),
+          : SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Form(
+                  key: _formKey,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        // Selector de múltiples imágenes
+                        _buildImageSelector(),
+                        const SizedBox(height: 24),
 
-                      // Campos del formulario
-                      TextFormField(
-                        controller: _nameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Nombre del producto',
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Por favor ingresa el nombre';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _priceController,
-                        decoration: const InputDecoration(
-                          labelText: 'Precio',
-                          prefixText: '\$ ',
-                          border: OutlineInputBorder(),
-                        ),
-                        keyboardType: TextInputType.number,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Por favor ingresa el precio';
-                          }
-                          final price = double.tryParse(value);
-                          if (price == null || price <= 0) {
-                            return 'Por favor ingresa un precio válido';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _descriptionController,
-                        decoration: const InputDecoration(
-                          labelText: 'Descripción',
-                          border: OutlineInputBorder(),
-                          alignLabelWithHint: true,
-                        ),
-                        maxLines: 4,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Por favor ingresa la descripción';
-                          }
-                          if (value.length < 10) {
-                            return 'La descripción debe tener al menos 10 caracteres';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 24),
-
-                      // ✅ MEJORA: Mostrar estado de autenticación
-                      if (authService.currentUser == null) ...[
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.orange[50],
-                            border: Border.all(color: Colors.orange),
-                            borderRadius: BorderRadius.circular(8),
+                        // Campos del formulario
+                        TextFormField(
+                          controller: _nameController,
+                          decoration: InputDecoration(
+                            labelText: 'Nombre del producto',
+                            labelStyle: const TextStyle(color: Color(0xFF64748B)),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: const Color(0xFF3A9188).withOpacity(0.3)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFF0F4C5C), width: 2),
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
                           ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.info, color: Colors.orange[800]),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Debes registrarte para publicar productos',
-                                  style: TextStyle(
-                                    color: Colors.orange[800],
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Por favor ingresa el nombre';
+                            }
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 16),
-                      ],
 
-                      // Botón de enviar
-                      SizedBox(
-                        width: double.infinity,
-                        height: 50,
-                        child: ElevatedButton(
-                          onPressed: _checkAuthAndSubmit, // ✅ CAMBIADO
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: authService.currentUser == null 
-                                ? Colors.grey 
-                                : Theme.of(context).primaryColor,
+                        //Selector de categoría
+                        DropdownButtonFormField<String>(
+                          value: _selectedCategory,
+                          decoration: InputDecoration(
+                            labelText: 'Categoría',
+                            labelStyle: const TextStyle(color: Color(0xFF64748B)),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: const Color(0xFF3A9188).withOpacity(0.3)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFF0F4C5C), width: 2),
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
                           ),
-                          child: Text(
+                          items: ProductCategories.allCategories
+                              .where((cat) => cat != 'todos') 
+                              .map((category) {
+                            return DropdownMenuItem(
+                              value: category,
+                              child: Row(
+                                children: [
+                                  Text(
+                                    ProductCategories.getIcon(category),
+                                    style: const TextStyle(fontSize: 16),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    _getCategoryDisplayName(category),
+                                    style: const TextStyle(
+                                      color: Color(0xFF202124),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedCategory = value ?? 'otros';
+                            });
+                          },
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Por favor selecciona una categoría';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        TextFormField(
+                          controller: _priceController,
+                          decoration: InputDecoration(
+                            labelText: 'Precio',
+                            labelStyle: const TextStyle(color: Color(0xFF64748B)),
+                            prefixText: '\$ ',
+                            prefixStyle: const TextStyle(
+                              color: Color(0xFF0F4C5C),
+                              fontWeight: FontWeight.w600,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: const Color(0xFF3A9188).withOpacity(0.3)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFF0F4C5C), width: 2),
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
+                          ),
+                          keyboardType: TextInputType.number,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Por favor ingresa el precio';
+                            }
+                            final price = double.tryParse(value);
+                            if (price == null || price <= 0) {
+                              return 'Por favor ingresa un precio válido';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _descriptionController,
+                          decoration: InputDecoration(
+                            labelText: 'Descripción',
+                            labelStyle: const TextStyle(color: Color(0xFF64748B)),
+                            alignLabelWithHint: true,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: const Color(0xFF3A9188).withOpacity(0.3)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFF0F4C5C), width: 2),
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
+                          ),
+                          maxLines: 4,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Por favor ingresa la descripción';
+                            }
+                            if (value.length < 10) {
+                              return 'La descripción debe tener al menos 10 caracteres';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Estado de autenticación
+                        if (authService.currentUser == null) ...[
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE9965C).withOpacity(0.1),
+                              border: Border.all(color: const Color(0xFFE9965C)),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.info, color: const Color(0xFFE9965C)),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    'Debes registrarte para publicar productos',
+                                    style: TextStyle(
+                                      color: const Color(0xFF0F4C5C),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+
+                        // Botón de enviar
+                        SizedBox(
+                          width: double.infinity,
+                          height: 54,
+                          child: ElevatedButton(
+                            onPressed: _checkAuthAndSubmit,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: authService.currentUser == null 
+                                  ? const Color(0xFF64748B) 
+                                  : const Color(0xFF3A9188), 
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 2,
+                            ),
+                            child: Text(
                               authService.currentUser == null
                                   ? 'Regístrate para Publicar'
                                   : 'Publicar Producto',
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 16,
-                                color: authService.currentUser == null
-                                    ? Colors.black   // texto negro cuando está gris
-                                    : Colors.white,  // texto blanco cuando está primario
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -293,31 +427,41 @@ class _AddProductScreenState extends State<AddProductScreen> {
     );
   }
 
-  // Diálogo para cuando se requiere autenticación
   void _showAuthRequiredDialog() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Registro Requerido'),
+        title: Text(
+          'Registro Requerido',
+          style: TextStyle(color: Color(0xFF0F4C5C)),
+        ),
         content: const Text('Para publicar productos necesitas crear una cuenta. ¿Te gustaría registrarte ahora?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
+            child: Text(
+              'Cancelar',
+              style: TextStyle(color: Color(0xFF64748B)),
+            ),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               Navigator.pushNamed(context, '/register');
             },
-            child: const Text('Registrarse'),
+            child: Text(
+              'Registrarse',
+              style: TextStyle(
+                color: Color(0xFF0F4C5C),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  // Selector para múltiples imágenes
   Widget _buildImageSelector() {
     return Column(
       children: [
@@ -328,12 +472,13 @@ class _AddProductScreenState extends State<AddProductScreen> {
               'Imágenes (${_selectedImages.length}/5)',
               style: const TextStyle(
                 fontSize: 16,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF0F4C5C),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         
         // Grid de imágenes seleccionadas
         if (_selectedImages.isNotEmpty) ...[
@@ -352,11 +497,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 children: [
                   Container(
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey),
-                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFF3A9188)),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(12),
                       child: Image.file(
                         _selectedImages[index],
                         width: double.infinity,
@@ -371,14 +516,15 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     child: GestureDetector(
                       onTap: () => _removeImage(index),
                       child: Container(
+                        padding: const EdgeInsets.all(4),
                         decoration: const BoxDecoration(
-                          color: Colors.red,
+                          color: Color(0xFFE9965C), 
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
                           Icons.close,
                           color: Colors.white,
-                          size: 16,
+                          size: 14,
                         ),
                       ),
                     ),
@@ -387,7 +533,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
               );
             },
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
         ],
         
         // Placeholder cuando no hay imágenes
@@ -396,25 +542,29 @@ class _AddProductScreenState extends State<AddProductScreen> {
             width: double.infinity,
             height: 150,
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey),
-              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFF3A9188).withOpacity(0.3)),
+              borderRadius: BorderRadius.circular(12),
+              color: Colors.white,
             ),
-            child: const Column(
+            child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.photo_library, size: 50, color: Colors.grey),
-                SizedBox(height: 8),
-                Text('Selecciona imágenes del producto'),
-                SizedBox(height: 4),
+                Icon(Icons.photo_library, size: 50, color: Color(0xFF3A9188)),
+                const SizedBox(height: 8),
+                Text(
+                  'Selecciona imágenes del producto',
+                  style: TextStyle(color: Color(0xFF64748B)),
+                ),
+                const SizedBox(height: 4),
                 Text(
                   'Máximo 5 imágenes',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                  style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                 ),
               ],
             ),
           ),
 
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         
         // Botones de acción
         Row(
@@ -422,21 +572,49 @@ class _AddProductScreenState extends State<AddProductScreen> {
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: _pickImages,
-                icon: const Icon(Icons.photo_library),
-                label: const Text('Galería'),
+                icon: Icon(Icons.photo_library, color: Color(0xFF0F4C5C)),
+                label: Text(
+                  'Galería',
+                  style: TextStyle(color: Color(0xFF0F4C5C)),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: Color(0xFF0F4C5C)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: _takePhoto,
-                icon: const Icon(Icons.camera_alt),
-                label: const Text('Cámara'),
+                icon: Icon(Icons.camera_alt, color: Color(0xFF0F4C5C)),
+                label: Text(
+                  'Cámara',
+                  style: TextStyle(color: Color(0xFF0F4C5C)),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: Color(0xFF0F4C5C)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
               ),
             ),
           ],
         ),
       ],
     );
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _priceController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
   }
 }

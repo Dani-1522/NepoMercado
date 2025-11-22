@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:nepomercado_app/screens/products/search_screen.dart';
-import 'package:nepomercado_app/screens/profile/profile_screen.dart';
+import 'package:NepoMercado/screens/products/search_screen.dart';
+import 'package:NepoMercado/screens/profile/profile_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../services/auth_service.dart';
@@ -11,8 +11,8 @@ import '../../widgets/loading_indicator.dart';
 import '../products/add_product_screen.dart';
 import '../products/product_detail_screen.dart';
 import '../products/my_products_screen.dart';
-import '../products/liked_products_screen.dart'; // ✅ AGREGAR IMPORT
-import '../auth/forgot_password_screen.dart'; // ✅ AGREGAR IMPORT
+import '../products/liked_products_screen.dart'; 
+import '../auth/forgot_password_screen.dart'; 
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -107,13 +107,13 @@ Future<void> _toggleLike(Product product, int index) async {
   
   if (response.success) {
     setState(() {
-      // Actualizar el producto en la lista con el nuevo estado
       _products[index] = Product(
         id: product.id,
         name: product.name,
         price: product.price,
         description: product.description,
         imageUrls: product.imageUrls,
+        category: product.category,
         userId: product.userId,
         artisanName: product.artisanName,
         artisanPhone: product.artisanPhone,
@@ -128,12 +128,15 @@ Future<void> _toggleLike(Product product, int index) async {
       SnackBar(
         content: Text(
           response.data?['liked'] == true 
-            ? '❤️ Agregado a tus favoritos' 
-            : '💔 Removido de tus favoritos',
+            ? ' Agregado a tus favoritos' 
+            : ' Removido de tus favoritos',
         ),
         duration: const Duration(seconds: 1),
-        backgroundColor: response.data?['liked'] == true ? Colors.green : Colors.grey,
-      ),
+            backgroundColor: response.data?['liked'] == true 
+      ? Color(0xFF3A9188) 
+      : Color(0xFF64748B), 
+  ),
+
     );
   } else {
     _showErrorSnackbar(response.message);
@@ -147,11 +150,22 @@ Future<void> _toggleLike(Product product, int index) async {
     final isLoggedIn = authService.currentUser != null;
 
     return Scaffold(
-      appBar: AppBar(
-  title: const Text('Catálogo'),
+       backgroundColor: Color(0xFFF4EDE4),
+appBar: AppBar(
+  title: const Text(
+    'Catálogo',
+    style: TextStyle(
+      color: Color(0xFF202124), 
+      fontWeight: FontWeight.w600,
+    ),
+  ),
+  backgroundColor: Colors.white, 
+  elevation: 1, 
+  iconTheme: const IconThemeData(color: Color(0xFF0F4C5C)),
+    
   actions: [
     IconButton(
-      icon: const Icon(Icons.search),
+     icon: const Icon(Icons.search, color: Color(0xFF3A9188)),
       onPressed: () => Navigator.push(
         context,
         MaterialPageRoute(
@@ -161,7 +175,7 @@ Future<void> _toggleLike(Product product, int index) async {
     ),
     if (isLoggedIn)
       IconButton(
-        icon: const Icon(Icons.add),
+         icon: const Icon(Icons.add, color: Color(0xFF3A9188)),
         onPressed: () => Navigator.push(
           context,
           MaterialPageRoute(
@@ -170,7 +184,7 @@ Future<void> _toggleLike(Product product, int index) async {
         ),
       ),
     IconButton(
-      icon: const Icon(Icons.refresh),
+       icon: const Icon(Icons.refresh, color: Color(0xFF3A9188)),
       onPressed: _refreshProducts,
     ),
   ],
@@ -184,16 +198,20 @@ Future<void> _toggleLike(Product product, int index) async {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.inventory_2, size: 64, color: Colors.grey),
+                      Icon(Icons.inventory_2, size: 64, color: Color(0xFF3A9188)),
                       SizedBox(height: 16),
                       Text(
                         'No hay productos disponibles',
-                        style: TextStyle(fontSize: 16, color: Colors.grey),
+                        style: TextStyle(
+                fontSize: 16, 
+                color: Color(0xFF202124), 
+                fontWeight: FontWeight.w500,
+              ),
                       ),
                       SizedBox(height: 8),
                       Text(
                         'Sé el primero en publicar un producto',
-                        style: TextStyle(color: Colors.grey),
+                        style: TextStyle(color: Color(0xFF64748B)),
                       ),
                     ],
                   ),
@@ -217,71 +235,86 @@ Future<void> _toggleLike(Product product, int index) async {
   }
 
   Widget _buildLoadMoreIndicator() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Center(
-        child: _hasMore
-            ? const CircularProgressIndicator()
-            : const Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Text(
-                  'No hay más productos',
-                  style: TextStyle(color: Colors.grey),
+  return Padding(
+    padding: const EdgeInsets.all(16.0),
+    child: Center(
+      child: _hasMore
+          ? CircularProgressIndicator(color: Color(0xFF0F4C5C)) 
+          : Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                'No hay más productos',
+                style: TextStyle(
+                  color: Color(0xFF64748B),
+                  fontStyle: FontStyle.italic,
                 ),
               ),
-      ),
-    );
-  }
-
+            ),
+    ),
+  );
+}
   Widget _buildDrawer(AuthService authService, bool isLoggedIn) {
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          // Header del Drawer
-          DrawerHeader(
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                const Text(
-                  'Nepo Mercado App',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                if (isLoggedIn)
-                  Text(
-                    'Hola, ${authService.currentUser!.name}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                    ),
-                  )
-                else
-                  const Text(
-                    'Bienvenido',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                    ),
-                  ),
-              ],
-            ),
+DrawerHeader(
+  decoration: const BoxDecoration(
+    gradient: LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        Color(0xFF0F4C5C), 
+        Color(0xFF3A9188), 
+      ],
+    ),
+  ),
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    mainAxisAlignment: MainAxisAlignment.end,
+    children: [
+      const Text(
+        'Nepo Mercado',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 22, 
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      const SizedBox(height: 8),
+      if (isLoggedIn)
+        Text(
+          'Hola, ${authService.currentUser!.name}',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14, 
           ),
+        )
+      else
+        const Text(
+          'Bienvenido',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+          ),
+        ),
+    ],
+  ),
+),
+          
 
           // Sección para usuarios logueados
           if (isLoggedIn) ...[
             // Productos likeados
             ListTile(
-  leading: const Icon(Icons.favorite),
-  title: const Text('Mis Favoritos'),
+  leading: Icon(Icons.favorite, color: Color(0xFF0F4C5C)),
+   title: Text(
+    'Mis Favoritos',
+    style: TextStyle(
+      color: Color(0xFF202124), 
+      fontWeight: FontWeight.w500,
+    ),
+  ),
   onTap: () {
     Navigator.pop(context);
     Navigator.push(
@@ -294,8 +327,15 @@ Future<void> _toggleLike(Product product, int index) async {
 ),            
             // Mis productos
             ListTile(
-              leading: const Icon(Icons.inventory),
-              title: const Text('Mis Productos'),
+              leading: const Icon(Icons.inventory,color: Color(0xFF0F4C5C)),
+              title: const Text(
+                'Mis Productos'
+                ,
+                style: TextStyle(
+                  color: Color(0xFF202124),   
+                  fontWeight: FontWeight.w500,
+                ),
+              ),          
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -309,8 +349,13 @@ Future<void> _toggleLike(Product product, int index) async {
             
             // Agregar producto
             ListTile(
-              leading: const Icon(Icons.add_circle),
-              title: const Text('Agregar Producto'),
+              leading: const Icon(Icons.add_circle,color: Color(0xFF0F4C5C)),
+              title: const Text('Agregar Producto',
+                style: TextStyle(
+                  color: Color(0xFF202124), 
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -323,8 +368,13 @@ Future<void> _toggleLike(Product product, int index) async {
             ),
 
               ListTile(
-              leading: const Icon(Icons.person),
-              title: const Text('Mi perfil '),
+              leading: const Icon(Icons.person,color: Color(0xFF0F4C5C)),
+              title: const Text('Mi perfil ',
+                style: TextStyle(
+                  color: Color(0xFF202124), 
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -341,8 +391,13 @@ Future<void> _toggleLike(Product product, int index) async {
           if (isLoggedIn)
             // Cerrar sesión
             ListTile(
-              leading: const Icon(Icons.logout),
-              title: const Text('Cerrar Sesión'),
+              leading: const Icon(Icons.logout,color: Color(0xFFE9965C)),
+              title: const Text('Cerrar Sesión',
+                style: TextStyle(
+                  color: Color(0xFFE9965C), 
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
               onTap: () {
                 Navigator.pop(context);
                 _showLogoutDialog(authService);
@@ -353,16 +408,26 @@ Future<void> _toggleLike(Product product, int index) async {
             Column(
               children: [
                 ListTile(
-                  leading: const Icon(Icons.login),
-                  title: const Text('Iniciar Sesión'),
+                  leading: const Icon(Icons.login, color: Color(0xFF0F4C5C)),
+                  title: const Text('Iniciar Sesión',
+                    style: TextStyle(
+                      color: Color(0xFF202124), 
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                   onTap: () {
                     Navigator.pop(context);
                     Navigator.pushReplacementNamed(context, '/login');
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.person_add),
-                  title: const Text('Registrarse'),
+                  leading: const Icon(Icons.person_add, color: Color(0xFF0F4C5C)),
+                  title: const Text('Registrarse',
+                    style: TextStyle(
+                      color: Color(0xFF202124), 
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                   onTap: () {
                     Navigator.pop(context);
                     Navigator.pushReplacementNamed(context, '/register');

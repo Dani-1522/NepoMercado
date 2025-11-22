@@ -26,6 +26,26 @@ const productSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Al menos una imagen es obligatoria']
   }],
+  category: {
+    type: String,
+    required: [true, 'La categoría es obligatoria'],
+    enum: [
+      'comida',
+      'ropa', 
+      'artesanias',
+      'electronica',
+      'hogar',
+      'deportes',
+      'libros',
+      'joyeria',
+      'salud',
+      'belleza',
+      'juguetes',
+      'mascotas',
+      'otros'
+    ],
+    default: 'otros'
+  },
   likes:[{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
@@ -41,5 +61,6 @@ const productSchema = new mongoose.Schema({
 // Índice para búsquedas más eficientes
 productSchema.index({ userId: 1, createdAt: -1 });
 productSchema.index({ likes: 1 });
+productSchema.index({ category: 1 });
 
 module.exports = mongoose.model('Product', productSchema);

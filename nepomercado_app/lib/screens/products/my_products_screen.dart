@@ -44,7 +44,9 @@ class _MyProductsScreenState extends State<MyProductsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.red,
+        backgroundColor: const Color(0xFFE9965C), 
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
@@ -53,7 +55,9 @@ class _MyProductsScreenState extends State<MyProductsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.green,
+        backgroundColor: const Color(0xFF3A9188), 
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
@@ -67,7 +71,6 @@ class _MyProductsScreenState extends State<MyProductsScreen> {
     );
   }
 
-  // ✅ CORREGIDO: Método para alternar like
   Future<void> _toggleLike(Product product, int index) async {
     final response = await _apiService.toggleLike(product.id);
     
@@ -80,6 +83,7 @@ class _MyProductsScreenState extends State<MyProductsScreen> {
           price: product.price,
           description: product.description,
           imageUrls: product.imageUrls,
+          category: product.category,
           userId: product.userId,
           artisanName: product.artisanName,
           artisanPhone: product.artisanPhone,
@@ -94,49 +98,114 @@ class _MyProductsScreenState extends State<MyProductsScreen> {
     }
   }
 
-  // 🔥 NUEVO: Mostrar menu de 3 puntos
   void _showPopupMenu(Product product, int index) {
     showModalBottomSheet(
-       context: context,
+      context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) => SafeArea(
         child: Container(
-          padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+          margin: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0F4C5C).withOpacity(0.05),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.inventory,
+                      color: Color(0xFF0F4C5C),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Opciones del producto',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF0F4C5C),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Opciones
               ListTile(
-                leading: const Icon(Icons.edit),
-                title: const Text('Editar Producto'),
+                leading: Icon(Icons.edit, color: Color(0xFF3A9188)),
+                title: Text(
+                  'Editar Producto',
+                  style: TextStyle(color: Color(0xFF202124)),
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   _navigateToEditProduct(product);
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.delete),
-                title: const Text('Eliminar Producto'),
+                leading: Icon(Icons.delete, color: Color(0xFFE9965C)),
+                title: Text(
+                  'Eliminar Producto',
+                  style: TextStyle(color: Color(0xFF202124)),
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   _confirmDeleteProduct(product);
                 },
               ),
-               const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          height: 50,
-          child: OutlinedButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-        ),
+              
+              // Botón cancelar
+              Container(
+                padding: const EdgeInsets.all(16),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: Color(0xFF0F4C5C)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Cancelar',
+                      style: TextStyle(
+                        color: Color(0xFF0F4C5C),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
       ),
     );
   }
-  // 🔥 ACTUALIZADO: Mantener el método existente pero renombrar para claridad
+
   void _showEditOptions(Product product) {
     _showPopupMenu(product, _products.indexOf(product));
   }
@@ -149,7 +218,7 @@ class _MyProductsScreenState extends State<MyProductsScreen> {
       ),
     ).then((shouldRefresh) {
       if (shouldRefresh == true) {
-        _loadMyProducts(); // Recargar la lista si hubo cambios
+        _loadMyProducts(); 
       }
     });
   }
@@ -158,19 +227,28 @@ class _MyProductsScreenState extends State<MyProductsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Eliminar Producto'),
+        title: Text(
+          'Eliminar Producto',
+          style: TextStyle(color: Color(0xFF0F4C5C)),
+        ),
         content: const Text('¿Estás seguro de que quieres eliminar este producto? Esta acción no se puede deshacer.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
+            child: Text(
+              'Cancelar',
+              style: TextStyle(color: Color(0xFF64748B)),
+            ),
           ),
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
               await _deleteProduct(product);
             },
-            child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
+            child: Text(
+              'Eliminar',
+              style: TextStyle(color: Color(0xFFE9965C)), 
+            ),
           ),
         ],
       ),
@@ -182,7 +260,7 @@ class _MyProductsScreenState extends State<MyProductsScreen> {
     
     if (response.success) {
       _showSuccessSnackbar('Producto eliminado exitosamente');
-      _loadMyProducts(); // Recargar la lista
+      _loadMyProducts(); 
     } else {
       _showErrorSnackbar(response.message);
     }
@@ -192,91 +270,205 @@ class _MyProductsScreenState extends State<MyProductsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mis Productos'),
+        title: const Text(
+          'Mis Productos',
+          style: TextStyle(
+            color: Color(0xFF202124),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 1,
+        iconTheme: const IconThemeData(color: Color(0xFF0F4C5C)),
+        foregroundColor: const Color(0xFF0F4C5C),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh, color: Color(0xFF3A9188)),
             onPressed: _loadMyProducts,
           ),
         ],
       ),
-      body: SafeArea( // 🔥 RESPETA LAS BARRAS DEL SISTEMA
-      bottom: true, // 🔥 ESPECIALMENTE IMPORTANTE PARA ANDROID
-      child: _isLoading
-          ? const LoadingIndicator(message: 'Cargando tus productos...')
-          : _products.isEmpty
-              ? const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.inventory, size: 64, color: Colors.grey),
-                      SizedBox(height: 16),
-                      Text(
-                        'No tienes productos publicados',
-                        style: TextStyle(fontSize: 16, color: Colors.grey),
+      backgroundColor: const Color(0xFFF4EDE4), 
+      body: SafeArea(
+        bottom: true,
+        child: _isLoading
+            ? const LoadingIndicator(message: 'Cargando tus productos...')
+            : _products.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 120,
+                            height: 120,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF3A9188).withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.inventory_2,
+                              size: 50,
+                              color: Color(0xFF3A9188), 
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          Text(
+                            'No tienes productos publicados',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF0F4C5C), 
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Comienza a compartir tus productos con la comunidad',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Color(0xFF64748B), 
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 32),
+                          SizedBox(
+                            width: 200,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                Navigator.pushNamed(context, '/add-product');
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF3A9188), 
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                              child: const Text(
+                                'Agregar Producto',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
+                  )
+                : RefreshIndicator(
+                    onRefresh: _loadMyProducts,
+                    color: const Color(0xFF0F4C5C), 
+                    backgroundColor: const Color(0xFFF4EDE4),
+                    child: Column(
+                      children: [
+                        // Header con estadísticas
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            border: Border(
+                              bottom: BorderSide(
+                                color: const Color(0xFF3A9188).withOpacity(0.1),
+                                width: 1,
+                              ),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.inventory_2,
+                                color: Color(0xFF3A9188), 
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '${_products.length} producto${_products.length == 1 ? '' : 's'} publicado${_products.length == 1 ? '' : 's'}',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF0F4C5C), 
+                                ),
+                              ),
+                              const Spacer(),
+                              if (_products.isNotEmpty)
+                                Text(
+                                  'Toca ⋮ para opciones',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF64748B), 
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        
+                        // Lista de productos
+                        Expanded(
+                          child: ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: _products.length,
+                            itemBuilder: (context, index) {
+                              final product = _products[index];
+                              return _buildProductCardWithMenu(product, index);
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadMyProducts,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _products.length,
-                    itemBuilder: (context, index) {
-                      final product = _products[index];
-                      return _buildProductCardWithMenu(product, index);
-                    },
-                  ),
-                ),
-    ),
-  );
-}
+      ),
+    );
+  }
 
-  // 🔥 NUEVO: Widget de tarjeta con menu de 3 puntos
-// 🔥 ALTERNATIVA: Si el Stack no funciona, modifica el ProductCard directamente
-Widget _buildProductCardWithMenu(Product product, int index) {
-  return Container(
-    margin: const EdgeInsets.only(bottom: 16),
-    child: Stack(
-      children: [
-        ProductCard(
-          product: product,
-          onTap: () => _navigateToProductDetail(product),
-          onLike: () => _toggleLike(product, index),
-          onLongPress: () => _showEditOptions(product),
-        ),
-        
-        // Botón de 3 puntos
-        Positioned(
-          top: 12,
-          right: 12,
-          child: GestureDetector(
-            onTap: () => _showPopupMenu(product, index),
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 4,
-                    offset: Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: const Icon(
-                Icons.more_vert,
-                size: 20,
-                color: Colors.grey,
+  Widget _buildProductCardWithMenu(Product product, int index) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Stack(
+        children: [
+          ProductCard(
+            product: product,
+            onTap: () => _navigateToProductDetail(product),
+            onLike: () => _toggleLike(product, index),
+            onLongPress: () => _showEditOptions(product),
+          ),
+          
+          // Botón de 3 puntos
+          Positioned(
+            top: 12,
+            right: 12,
+            child: GestureDetector(
+              onTap: () => _showPopupMenu(product, index),
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.more_vert,
+                  size: 20,
+                  color: Color(0xFF0F4C5C), 
+                ),
               ),
             ),
           ),
-        ),
-      ],
-    ),
-  );
-}
+        ],
+      ),
+    );
+  }
 }

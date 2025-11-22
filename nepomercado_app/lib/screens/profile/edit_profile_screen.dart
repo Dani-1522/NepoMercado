@@ -1,6 +1,5 @@
-// screens/profile/edit_profile_screen.dart
-import 'package:flutter/material.dart';
 
+import 'package:flutter/material.dart';
 import '../../models/user.dart';
 import '../../services/user_service.dart';
 
@@ -48,41 +47,131 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     setState(() => _isLoading = false);
 
     if (response.success) {
-      Navigator.pop(context, true); // Retornar éxito
+      Navigator.pop(context, true); 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response.message)),
+        SnackBar(
+          content: Text(response.message),
+          backgroundColor: const Color(0xFF3A9188), 
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response.message)),
+        SnackBar(
+          content: Text(response.message),
+          backgroundColor: const Color(0xFFE9965C), 
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
       );
     }
   }
 
-   @override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Editar Perfil'),
+        title: const Text(
+          'Editar Perfil',
+          style: TextStyle(
+            color: Color(0xFF202124),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 1,
+        iconTheme: const IconThemeData(color: Color(0xFF0F4C5C)),
+        foregroundColor: const Color(0xFF0F4C5C),
       ),
+      backgroundColor: const Color(0xFFF4EDE4), 
       body: SafeArea(
         bottom: true,
         child: Padding(
-          padding: EdgeInsets.all(16),
+          padding: const EdgeInsets.all(16.0),
           child: Form(
             key: _formKey,
             child: Column(
               children: [
+                // Header informativo
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF3A9188).withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.person,
+                          color: Color(0xFF3A9188),
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Información Personal',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF0F4C5C),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Actualiza tu información de contacto',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF64748B),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
                 Expanded(
                   child: SingleChildScrollView(
                     child: Column(
                       children: [
+                        // Campo de nombre
                         TextFormField(
                           controller: _nameController,
                           decoration: InputDecoration(
-                            labelText: 'Nombre',
-                            prefixIcon: Icon(Icons.person),
-                            border: OutlineInputBorder(),
+                            labelText: 'Nombre completo',
+                            labelStyle: const TextStyle(color: Color(0xFF64748B)),
+                            prefixIcon: const Icon(Icons.person, color: Color(0xFF3A9188)),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: const Color(0xFF3A9188).withOpacity(0.3)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFF0F4C5C), width: 2),
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
                           ),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
@@ -94,13 +183,25 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             return null;
                           },
                         ),
-                        SizedBox(height: 16),
+                        const SizedBox(height: 16),
+
+                        // Campo de teléfono
                         TextFormField(
                           controller: _phoneController,
                           decoration: InputDecoration(
                             labelText: 'Teléfono',
-                            prefixIcon: Icon(Icons.phone),
-                            border: OutlineInputBorder(),
+                            labelStyle: const TextStyle(color: Color(0xFF64748B)),
+                            prefixIcon: const Icon(Icons.phone, color: Color(0xFF3A9188)),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: const Color(0xFF3A9188).withOpacity(0.3)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFF0F4C5C), width: 2),
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
                           ),
                           keyboardType: TextInputType.phone,
                           validator: (value) {
@@ -113,19 +214,72 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             return null;
                           },
                         ),
+                        const SizedBox(height: 16),
+
+                        // Información adicional
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0F4C5C).withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFF0F4C5C).withOpacity(0.1)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.info_outline,
+                                color: Color(0xFF0F4C5C),
+                                size: 20,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Información visible',
+                                      style: TextStyle(
+                                        color: Color(0xFF0F4C5C),
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Tu nombre y teléfono serán visibles para otros usuarios cuando publiques productos',
+                                      style: TextStyle(
+                                        color: Color(0xFF64748B),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
                 ),
-                SizedBox(height: 16),
-                // 🔥 NUEVO BOTÓN GUARDAR
+                const SizedBox(height: 16),
+
+                // Botón Guardar Cambios
                 SizedBox(
                   width: double.infinity,
-                  height: 50,
+                  height: 54,
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _updateProfile,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF3A9188), 
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 2,
+                    ),
                     child: _isLoading
-                        ? SizedBox(
+                        ? const SizedBox(
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
@@ -133,19 +287,36 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           )
-                        : Text(
+                        : const Text(
                             'Guardar Cambios',
-                            style: TextStyle(fontSize: 16),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                   ),
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 12),
+
+                // Botón Cancelar
                 SizedBox(
                   width: double.infinity,
-                  height: 50,
+                  height: 54,
                   child: OutlinedButton(
                     onPressed: () => Navigator.pop(context),
-                    child: Text('Cancelar'),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFF0F4C5C)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Cancelar',
+                      style: TextStyle(
+                        color: Color(0xFF0F4C5C),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
               ],

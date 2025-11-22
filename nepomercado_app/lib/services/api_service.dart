@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:nepomercado_app/models/search_filters.dart';
+import 'package:NepoMercado/models/search_filters.dart';
 import '../config/constants.dart';
 import '../models/api_response.dart';
 import '../models/product.dart';
@@ -69,6 +69,70 @@ class ApiService {
       );
     }
   }
+// Obtener perfil de otro usuario por ID
+Future<ApiResponse<User>> getUserProfile(String userId) async {
+  try {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/users/$userId'),
+      headers: await _getHeaders(),
+    );
+
+    final data = json.decode(response.body);
+    
+    if (data['success'] == true) {
+      final user = User.fromJson(data['data']['user']);
+      return ApiResponse(
+        success: true,
+        message: data['message']?.toString() ?? 'Perfil obtenido',
+        data: user,
+      );
+    }
+
+    return ApiResponse(
+      success: false,
+      message: data['message']?.toString() ?? 'Error al obtener perfil',
+    );
+  } catch (e) {
+    print('ERROR en getUserProfile: $e');
+    return ApiResponse(
+      success: false,
+      message: 'Error de conexión: $e',
+    );
+  }
+}
+// Obtener productos de un usuario por ID
+Future<ApiResponse<List<Product>>> getUserProducts(String userId) async {
+  try {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/products/user/$userId'),
+      headers: await _getHeaders(),
+    );
+
+    final data = json.decode(response.body);
+    
+    if (data['success'] == true) {
+      final products = (data['data']['products'] as List)
+          .map((item) => Product.fromJson(item))
+          .toList();
+      return ApiResponse(
+        success: true,
+        message: data['message']?.toString() ?? 'Productos obtenidos',
+        data: products,
+      );
+    }
+
+    return ApiResponse(
+      success: false,
+      message: data['message']?.toString() ?? 'Error al obtener productos',
+    );
+  } catch (e) {
+    print('ERROR en getUserProducts: $e');
+    return ApiResponse(
+      success: false,
+      message: 'Error de conexión: $e',
+    );
+  }
+}
 
   // PRODUCT ENDPOINTS
   Future<ApiResponse<List<Product>>> getProducts({int page = 1, int limit = 10}) async {
@@ -139,12 +203,13 @@ class ApiService {
   required String name,
   required double price,
   required String description,
+   required String category,
   required List<File> images,
 }) async {
   try {
     final token = await _storage.getToken();
     
-    print('📦 Creando producto con ${images.length} Imagenes');
+    print('Creando producto con ${images.length} Imagenes');
 
     var request = http.MultipartRequest(
       'POST',
@@ -157,26 +222,25 @@ class ApiService {
     request.fields['name'] = name;  
     request.fields['price'] = price.toString();
     request.fields['description'] = description;
+    request.fields['category'] = category;
 
     for (var i = 0; i < images.length; i++) {
       final image = images[i];
       final mimeType = _getMimeType(image.path);
 
       request.files.add(await http.MultipartFile.fromPath(
-        'images', // Nombre del campo como un array
+        'images', 
         image.path,
-        contentType: MediaType.parse(mimeType), // ✅ Especificar content-type
+        contentType: MediaType.parse(mimeType), 
       ));
    
-      print('   - Imagen ${i + 1}: ${image.path} (MIME: $mimeType)');
+    
     }
-    print('📤 Enviando request...');
+
     final streamedResponse = await request.send();
     final response = await http.Response.fromStream(streamedResponse);
     
-    print('📥 Respuesta recibida:');
-    print('   - Status: ${response.statusCode}');
-    print('   - Body: ${response.body}');
+   
 
     // Verificar si es una respuesta JSON válida
     if (response.body.startsWith('<!DOCTYPE html>')) {
@@ -201,7 +265,7 @@ class ApiService {
     );
 
   } catch (e) {
-    print('💥 ERROR en createProduct: $e');
+    print('ERROR en createProduct: $e');
     return ApiResponse(
       success: false,
       message: 'Error al crear producto: $e',
@@ -209,18 +273,19 @@ class ApiService {
   }
 }
 
-  // ✅ NUEVO: Actualizar producto
-Future<ApiResponse<Product>> updateProduct({
+  //Actualizar producto
+  Future<ApiResponse<Product>> updateProduct({
   required String productId,
   required String name,
   required double price,
   required String description,
+  required String category,
   required List<File> images,
 }) async {
   try {
     final token = await _storage.getToken();
     
-    print('🔄 ACTUALIZANDO PRODUCTO: $productId');
+    
 
     var request = http.MultipartRequest(
       'PUT',
@@ -233,6 +298,7 @@ Future<ApiResponse<Product>> updateProduct({
     request.fields['name'] = name;
     request.fields['price'] = price.toString();
     request.fields['description'] = description;
+    request.fields['category'] = category;
 
     // Agregar nuevas imágenes
     for (int i = 0; i < images.length; i++) {
@@ -267,7 +333,7 @@ Future<ApiResponse<Product>> updateProduct({
     );
 
   } catch (e) {
-    print('💥 ERROR en updateProduct: $e');
+    print('ERROR en updateProduct: $e');
     return ApiResponse(
       success: false,
       message: 'Error al actualizar producto: $e',
@@ -275,8 +341,8 @@ Future<ApiResponse<Product>> updateProduct({
   }
 }
 
-// ✅ NUEVO: Eliminar producto
-Future<ApiResponse<dynamic>> deleteProduct(String productId) async {
+// Eliminar producto
+  Future<ApiResponse<dynamic>> deleteProduct(String productId) async {
   try {
     final token = await _storage.getToken();
     
@@ -291,15 +357,15 @@ Future<ApiResponse<dynamic>> deleteProduct(String productId) async {
     return ApiResponse.fromJson(data);
 
   } catch (e) {
-    print('💥 ERROR en deleteProduct: $e');
+    print('ERROR en deleteProduct: $e');
     return ApiResponse(
       success: false,
       message: 'Error al eliminar producto: $e',
     );
   }
 }
-
-Future<ApiResponse<List<Product>>> getMyProducts() async {
+  // Obtener productos del usuario autenticado
+  Future<ApiResponse<List<Product>>> getMyProducts() async {
   try {
     final response = await http.get(
       Uri.parse('$_baseUrl/products/user/my-products'),
@@ -321,30 +387,30 @@ Future<ApiResponse<List<Product>>> getMyProducts() async {
           }
         } catch (e) {
           print('⚠️ Error procesando producto: $e');
-          // Continuar con los demás productos
+          
         }
       }
 
       return ApiResponse(
         success: true,
-        message: data['message']?.toString() ?? 'Productos obtenidos exitosamente', // ← SOLUCIÓN
+        message: data['message']?.toString() ?? 'Productos obtenidos exitosamente',
         data: products,
       );
     }
 
     return ApiResponse(
       success: false,
-      message: data['message']?.toString() ?? 'Error al obtener productos', // ← TAMBIÉN AQUÍ
+      message: data['message']?.toString() ?? 'Error al obtener productos',
     );
   } catch (e, stackTrace) {
-    print('💥 ERROR en getMyProducts: $e');
-    print('📋 StackTrace: $stackTrace');
+    
     return ApiResponse(
       success: false,
       message: 'Error de conexión: $e',
     );
   }
 }
+  // Toggle Like en producto
   Future<ApiResponse<Map<String, dynamic>>> toggleLike(String productId) async {
     try {
       final token = await _storage.getToken();
@@ -362,7 +428,7 @@ Future<ApiResponse<List<Product>>> getMyProducts() async {
       return ApiResponse.fromJson(data);
 
     } catch (e) {
-      print('💥 ERROR en toggleLike: $e');
+      print('ERROR en toggleLike: $e');
       return ApiResponse(
         success: false,
         message: 'Error al dar like: $e',
@@ -370,7 +436,7 @@ Future<ApiResponse<List<Product>>> getMyProducts() async {
     }
   }
 
-  // ✅ NUEVO: Búsqueda con filtros
+  // Búsqueda con filtros
   Future<ApiResponse<Map<String, dynamic>>> searchProducts(SearchFilters filters) async {
     try {
       // Construir URL con parámetros de consulta
@@ -378,7 +444,7 @@ Future<ApiResponse<List<Product>>> getMyProducts() async {
         queryParameters: filters.toQueryParams(),
       );
 
-      print('🔍 Buscando productos: ${uri.toString()}');
+   
 
       final response = await http.get(
         uri,
@@ -411,7 +477,7 @@ Future<ApiResponse<List<Product>>> getMyProducts() async {
       );
 
     } catch (e) {
-      print('💥 ERROR en searchProducts: $e');
+      print('ERROR en searchProducts: $e');
       return ApiResponse(
         success: false,
         message: 'Error en búsqueda: $e',
@@ -419,7 +485,40 @@ Future<ApiResponse<List<Product>>> getMyProducts() async {
     }
   }
   
-  // ✅ NUEVO: Obtener productos likeados
+  // Búsqueda de vendedores
+Future<ApiResponse<List<User>>> searchVendors(String query) async {
+  try {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/users/search/vendors?query=$query'),
+      headers: await _getHeaders(),
+    );
+
+    final data = json.decode(response.body);
+    
+    if (data['success'] == true) {
+      final vendors = (data['data']['users'] as List)
+          .map((item) => User.fromJson(item))
+          .toList();
+      return ApiResponse(
+        success: true,
+        message: data['message']?.toString() ?? 'Vendedores encontrados',
+        data: vendors,
+      );
+    }
+
+    return ApiResponse(
+      success: false,
+      message: data['message']?.toString() ?? 'Error buscando vendedores',
+    );
+  } catch (e) {
+    print('ERROR en searchVendors: $e');
+    return ApiResponse(
+      success: false,
+      message: 'Error de conexión: $e',
+    );
+  }
+}
+  // Obtener productos likeados
   Future<ApiResponse<List<Product>>> getLikedProducts() async {
     try {
       final token = await _storage.getToken();
@@ -451,7 +550,7 @@ Future<ApiResponse<List<Product>>> getMyProducts() async {
       );
 
     } catch (e) {
-      print('💥 ERROR en getLikedProducts: $e');
+      print('ERROR en getLikedProducts: $e');
       return ApiResponse(
         success: false,
         message: 'Error obteniendo productos likeados: $e',
@@ -459,7 +558,7 @@ Future<ApiResponse<List<Product>>> getMyProducts() async {
     }
   }
 
-  // ✅ NUEVO: Recuperación de contraseña
+  // Recuperación de contraseña
   Future<ApiResponse<dynamic>> forgotPassword(String phone) async {
     try {
       final response = await http.post(
@@ -479,7 +578,7 @@ Future<ApiResponse<List<Product>>> getMyProducts() async {
     }
   }
 
-  // ✅ NUEVO: Verificar código
+  // Verificar código
   Future<ApiResponse<dynamic>> verifyRecoveryCode(String phone, String code) async {
     try {
       final response = await http.post(
@@ -499,7 +598,7 @@ Future<ApiResponse<List<Product>>> getMyProducts() async {
     }
   }
 
-  // ✅ NUEVO: Resetear contraseña
+  // Resetear contraseña
   Future<ApiResponse<dynamic>> resetPassword(String tempToken, String newPassword) async {
     try {
       final response = await http.post(
